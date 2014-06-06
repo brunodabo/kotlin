@@ -42,6 +42,10 @@ import com.intellij.psi.PsiMethod
 import org.jetbrains.jet.plugin.search.allScope
 import org.jetbrains.jet.plugin.caches.resolve.getBindingContext
 import org.jetbrains.jet.lang.resolve.CompositeBindingContext
+import org.jetbrains.jet.plugin.caches.resolve.KotlinCacheService
+import org.jetbrains.jet.plugin.caches.resolve.getModuleInfo
+import org.jetbrains.jet.plugin.caches.resolve.ModuleSetup
+import org.jetbrains.jet.lang.resolve.DescriptorUtils
 
 public trait JetReference : PsiPolyVariantReference {
     public fun resolveToDescriptors(): Collection<DeclarationDescriptor>
@@ -86,8 +90,10 @@ abstract class AbstractJetReference<T : JetElement>(element: T)
     override fun isSoft(): Boolean = false
 
     private fun resolveToPsiElements(): Collection<PsiElement> {
-        val context = AnalyzerFacadeWithCache.getContextForElement(expression)
-        return resolveToPsiElements(context, getTargetDescriptors(context))
+        val moduleSetup = KotlinCacheService.getInstance(expression.getProject()).getModuleSetup(expression)
+        val resolveSessionForBodies = moduleSetup.resolveSessionForBodiesByModule(expression.getModuleInfo()!!)
+        val context = resolveSessionForBodies.resolveToElement(expression)
+        return resolveToPsiElements(moduleSetup, getTargetDescriptors(context), context)
     }
 
     override fun resolveToDescriptors(): Collection<DeclarationDescriptor> {
@@ -96,15 +102,18 @@ abstract class AbstractJetReference<T : JetElement>(element: T)
     }
 
     override fun resolveMap(): Map<DeclarationDescriptor, Collection<PsiElement>> {
-        val context = AnalyzerFacadeWithCache.getContextForElement(expression)
-        return getTargetDescriptors(context) keysToMap { resolveToPsiElements(context, it) }
+        val moduleSetup = KotlinCacheService.getInstance(expression.getProject()).getModuleSetup(expression)
+        val resolveSessionForBodies = moduleSetup.resolveSessionForBodiesByModule(expression.getModuleInfo()!!)
+        val context = resolveSessionForBodies.resolveToElement(expression)
+        return getTargetDescriptors(context) keysToMap { resolveToPsiElements(moduleSetup, it, context) }
     }
 
-    private fun resolveToPsiElements(context: BindingContext, targetDescriptors: Collection<DeclarationDescriptor>): Collection<PsiElement> {
+    private fun resolveToPsiElements(moduleSetup: ModuleSetup, targetDescriptors: Collection<DeclarationDescriptor>, localContext: BindingContext): Collection<PsiElement> {
         if (targetDescriptors.isNotEmpty()) {
-            return targetDescriptors flatMap { target -> resolveToPsiElements(context, target) }
+            return targetDescriptors flatMap { target -> resolveToPsiElements(moduleSetup, target, localContext) }
         }
 
+        val context = moduleSetup.resolveSessionForBodiesByModule(expression.getModuleInfo()!!).getBindingContext()
         val labelTargets = getLabelTargets(context)
         if (labelTargets != null) {
             return labelTargets
@@ -113,14 +122,13 @@ abstract class AbstractJetReference<T : JetElement>(element: T)
         return Collections.emptySet()
     }
 
-    private fun resolveToPsiElements(context: BindingContext, targetDescriptor: DeclarationDescriptor): Collection<PsiElement> {
+    private fun resolveToPsiElements(moduleSetup: ModuleSetup, targetDescriptor: DeclarationDescriptor, localContext: BindingContext): Collection<PsiElement> {
         val result = HashSet<PsiElement>()
         val project = expression.getProject()
-        //TODO: CompositeBindingContext is redundant here, can be clearer
-        val bindingContext = CompositeBindingContext.create(listOf(context, targetDescriptor.getBindingContext(project)).filterNotNull())
-        if (bindingContext != null) {
-            result.addAll(BindingContextUtils.descriptorToDeclarations(bindingContext, targetDescriptor))
-        }
+        val contextForTarget = moduleSetup.resolveSessionForBodiesByModuleDescriptor(DescriptorUtils.getContainingModule(targetDescriptor))?.getBindingContext()
+        val bindingContext = CompositeBindingContext.create(listOf(contextForTarget, localContext).filterNotNull())
+
+        result.addAll(BindingContextUtils.descriptorToDeclarations(bindingContext, targetDescriptor))
         result.addAll(DescriptorToDeclarationUtil.findDeclarationsForDescriptorWithoutTrace(project, targetDescriptor))
 
         if (targetDescriptor is PackageViewDescriptor) {

@@ -125,6 +125,16 @@ class KotlinCacheService(val project: Project) {
         return globalCachesPerPlatform[platform]!!.getLazyResolveSession(module)
     }
 
+    //TODO: hack for reference resolve
+    public fun getModuleSetup(element: JetElement): ModuleSetup {
+        //TODO: code dup
+        val file = element.getContainingJetFile()
+        if (!isFileInScope(file)) {
+            return getCacheForSyntheticFile(file).getModuleSetup()
+        }
+        return globalCachesPerPlatform[TargetPlatformDetector.getPlatform(file)]!!.getModuleSetup()
+    }
+
     public fun getLazyResolveSession(element: JetElement): ResolveSessionForBodies {
         val file = element.getContainingJetFile()
         if (!isFileInScope(file)) {

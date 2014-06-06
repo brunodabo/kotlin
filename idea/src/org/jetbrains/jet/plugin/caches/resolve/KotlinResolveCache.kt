@@ -92,6 +92,11 @@ private class KotlinResolveCache(
         return setupCache.getValue().resolveSessionForBodiesByModule(element.getModuleInfo()!!)
     }
 
+    //TODO: hack for reference resolve, should prettfy this
+    public fun getModuleSetup(): ModuleSetup {
+       return setupCache.getValue()
+    }
+
     //TODO: temp
     public fun getLazyResolveSession(moduleDescriptor: ModuleDescriptor): ResolveSessionForBodies? {
         return setupCache.getValue().resolveSessionForBodiesByModuleDescriptor(moduleDescriptor)

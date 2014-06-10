@@ -38,9 +38,18 @@ import org.jetbrains.jet.plugin.caches.resolve.getLazyResolveSession
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall
 import org.jetbrains.jet.lang.resolve.scopes.receivers.ReceiverValue
 import org.jetbrains.jet.renderer.DescriptorRenderer.FQ_NAMES_IN_TYPES
+import com.intellij.openapi.util.Key
 
 public object ShortenReferences {
+
+    public val CONTEXT_FOR_SYNTHETIC_CODE_ELEMENT: Key<JetElement> = Key.create<JetElement>("CONTEXT_FOR_SYNTHETIC_CODE_ELEMENT")
+
     public fun process(element: JetElement) {
+        process(listOf(element))
+    }
+
+    public fun processSyntheticElement(element: JetElement, context: JetElement) {
+        element.getContainingJetFile().putUserData(CONTEXT_FOR_SYNTHETIC_CODE_ELEMENT, context)
         process(listOf(element))
     }
 

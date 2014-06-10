@@ -87,7 +87,7 @@ public class MakeTypeExplicitInLambdaIntention : JetSelfTargetingIntention<JetFu
             val paramList = functionLiteral.getValueParameterList()
             val returnTypeColon = JetPsiFactory.createColon(element.getProject())
             val returnTypeExpr = JetPsiFactory.createType(element.getProject(), DescriptorRenderer.SOURCE_CODE.renderType(expectedReturnType))
-            ShortenReferences.process(returnTypeExpr)
+            ShortenReferences.processSyntheticElement(returnTypeExpr, element)
             functionLiteral.addAfter(returnTypeExpr, paramList)
             functionLiteral.addAfter(returnTypeColon, paramList)
         }
@@ -98,7 +98,7 @@ public class MakeTypeExplicitInLambdaIntention : JetSelfTargetingIntention<JetFu
             val receiverTypeString = DescriptorRenderer.SOURCE_CODE.renderType(expectedReceiverType)
             val paramListString = functionLiteral.getValueParameterList()?.getText()
             val paramListWithReceiver = JetPsiFactory.createExpression(element.getProject(), receiverTypeString + "." + paramListString)
-            ShortenReferences.process(paramListWithReceiver)
+            ShortenReferences.processSyntheticElement(paramListWithReceiver, element)
             functionLiteral.getValueParameterList()?.replace(paramListWithReceiver)
         }
     }

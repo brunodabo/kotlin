@@ -97,6 +97,7 @@ public class ConfigLibraryUtil {
     }
 
     public static Library addLibrary(NewLibraryEditor editor, ModifiableRootModel model) {
+        //TODO: merge with org.jetbrains.jet.plugin.JdkAndMockLibraryProjectDescriptor#configureModule
         LibraryTable.ModifiableModel projectTableModel = ProjectLibraryTable.getInstance(model.getProject()).getModifiableModel();
         Library library = projectTableModel.createLibrary(editor.getName());
 
@@ -105,6 +106,7 @@ public class ConfigLibraryUtil {
 
         libModel.commit();
         projectTableModel.commit();
+        model.addLibraryEntry(library);
 
         return library;
     }

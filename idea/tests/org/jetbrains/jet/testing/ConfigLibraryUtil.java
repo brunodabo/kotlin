@@ -21,7 +21,9 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.*;
 import com.intellij.openapi.roots.impl.libraries.LibraryEx;
+import com.intellij.openapi.roots.impl.libraries.ProjectLibraryTable;
 import com.intellij.openapi.roots.libraries.Library;
+import com.intellij.openapi.roots.libraries.LibraryTable;
 import com.intellij.openapi.roots.ui.configuration.libraryEditor.NewLibraryEditor;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VfsUtil;
@@ -95,12 +97,14 @@ public class ConfigLibraryUtil {
     }
 
     public static Library addLibrary(NewLibraryEditor editor, ModifiableRootModel model) {
-        Library library = model.getModuleLibraryTable().createLibrary(editor.getName());
+        LibraryTable.ModifiableModel projectTableModel = ProjectLibraryTable.getInstance(model.getProject()).getModifiableModel();
+        Library library = projectTableModel.createLibrary(editor.getName());
 
-        final Library.ModifiableModel libModel = library.getModifiableModel();
+        Library.ModifiableModel libModel = library.getModifiableModel();
         editor.applyTo((LibraryEx.ModifiableModelEx) libModel);
 
         libModel.commit();
+        projectTableModel.commit();
 
         return library;
     }

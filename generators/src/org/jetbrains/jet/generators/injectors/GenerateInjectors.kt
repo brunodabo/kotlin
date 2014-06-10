@@ -38,7 +38,7 @@ import org.jetbrains.jet.lang.descriptors.ModuleDescriptorBase
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.jet.lang.resolve.java.lazy.ModuleClassResolver
 import org.jetbrains.jet.lang.resolve.kotlin.DeserializationGlobalContextForJava
-import org.jetbrains.jet.lang.resolve.java.lazy.DefaultModuleClassResolver
+import org.jetbrains.jet.lang.resolve.java.lazy.SingleModuleClassResolver
 
 // NOTE: After making changes, you need to re-generate the injectors.
 //       To do that, you can run main in this file.
@@ -111,7 +111,7 @@ private fun generatorForTopDownAnalyzerForJvm() =
                     javaClass<PsiBasedExternalAnnotationResolver>(),
                     javaClass<MutablePackageFragmentProvider>(),
                     javaClass<JavaPropertyInitializerEvaluatorImpl>(),
-                    javaClass<DefaultModuleClassResolver>()
+                    javaClass<SingleModuleClassResolver>()
             )
             field(javaClass<VirtualFileFinder>(), init = GivenExpression(javaClass<VirtualFileFinder>().getName() + ".SERVICE.getInstance(project)"))
         }
@@ -139,7 +139,8 @@ private fun generatorForJavaDescriptorResolver() =
                     javaClass<TraceBasedErrorReporter>(),
                     javaClass<PsiBasedMethodSignatureChecker>(),
                     javaClass<PsiBasedExternalAnnotationResolver>(),
-                    javaClass<JavaPropertyInitializerEvaluatorImpl>()
+                    javaClass<JavaPropertyInitializerEvaluatorImpl>(),
+                    javaClass<SingleModuleClassResolver>()
             )
             field(javaClass<VirtualFileFinder>(),
                   init = GivenExpression(javaClass<VirtualFileFinder>().getName() + ".SERVICE.getInstance(project)"))
@@ -174,7 +175,8 @@ private fun generatorForLazyResolveWithJava() =
                     javaClass<TraceBasedErrorReporter>(),
                     javaClass<PsiBasedMethodSignatureChecker>(),
                     javaClass<PsiBasedExternalAnnotationResolver>(),
-                    javaClass<JavaPropertyInitializerEvaluatorImpl>()
+                    javaClass<JavaPropertyInitializerEvaluatorImpl>(),
+                    javaClass<SingleModuleClassResolver>()
             )
         }
 

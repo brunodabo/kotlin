@@ -25,6 +25,7 @@ import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.PlatformToKotlinClassMap;
 import org.jetbrains.jet.lang.resolve.lazy.ResolveSession;
 import org.jetbrains.jet.lang.resolve.java.JavaDescriptorResolver;
+import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinder;
 import org.jetbrains.jet.lang.resolve.java.JavaClassFinderImpl;
 import org.jetbrains.jet.lang.resolve.java.resolver.TraceBasedExternalSignatureResolver;
@@ -33,6 +34,7 @@ import org.jetbrains.jet.lang.resolve.java.resolver.TraceBasedErrorReporter;
 import org.jetbrains.jet.lang.resolve.java.resolver.PsiBasedMethodSignatureChecker;
 import org.jetbrains.jet.lang.resolve.java.resolver.PsiBasedExternalAnnotationResolver;
 import org.jetbrains.jet.lang.resolve.java.structure.impl.JavaPropertyInitializerEvaluatorImpl;
+import org.jetbrains.jet.lang.resolve.java.lazy.SingleModuleClassResolver;
 import org.jetbrains.jet.lang.resolve.AnnotationResolver;
 import org.jetbrains.jet.lang.resolve.calls.CallResolver;
 import org.jetbrains.jet.lang.resolve.calls.ArgumentTypeResolver;
@@ -76,6 +78,7 @@ public class InjectorForLazyResolveWithJava {
     private final PlatformToKotlinClassMap platformToKotlinClassMap;
     private final ResolveSession resolveSession;
     private final JavaDescriptorResolver javaDescriptorResolver;
+    private final GlobalSearchScope globalSearchScope;
     private final VirtualFileFinder virtualFileFinder;
     private final JavaClassFinderImpl javaClassFinder;
     private final TraceBasedExternalSignatureResolver traceBasedExternalSignatureResolver;
@@ -84,6 +87,7 @@ public class InjectorForLazyResolveWithJava {
     private final PsiBasedMethodSignatureChecker psiBasedMethodSignatureChecker;
     private final PsiBasedExternalAnnotationResolver psiBasedExternalAnnotationResolver;
     private final JavaPropertyInitializerEvaluatorImpl javaPropertyInitializerEvaluator;
+    private final SingleModuleClassResolver singleModuleClassResolver;
     private final AnnotationResolver annotationResolver;
     private final CallResolver callResolver;
     private final ArgumentTypeResolver argumentTypeResolver;
@@ -118,8 +122,148 @@ public class InjectorForLazyResolveWithJava {
         @NotNull DeclarationProviderFactory declarationProviderFactory,
         @NotNull BindingTrace bindingTrace
     ) {
+        this.project = project;
+        this.globalContext = globalContext;
+        this.lockBasedStorageManager = globalContext.getStorageManager();
+        this.declarationProviderFactory = declarationProviderFactory;
+        this.bindingTrace = bindingTrace;
+        this.module = org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM.createJavaModule("<fake-jdr-module>");
+        this.platformToKotlinClassMap = module.getPlatformToKotlinClassMap();
+        this.resolveSession = new ResolveSession(project, globalContext, getModule(), declarationProviderFactory, bindingTrace);
+        this.javaClassFinder = new JavaClassFinderImpl();
+        this.virtualFileFinder = org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinder.SERVICE.getInstance(project);
+        this.deserializedDescriptorResolver = new DeserializedDescriptorResolver();
+        this.psiBasedExternalAnnotationResolver = new PsiBasedExternalAnnotationResolver();
+        this.traceBasedExternalSignatureResolver = new TraceBasedExternalSignatureResolver();
+        this.traceBasedErrorReporter = new TraceBasedErrorReporter();
+        this.psiBasedMethodSignatureChecker = new PsiBasedMethodSignatureChecker();
+        this.lazyResolveBasedCache = new LazyResolveBasedCache();
+        this.javaPropertyInitializerEvaluator = new JavaPropertyInitializerEvaluatorImpl();
+        this.singleModuleClassResolver = new SingleModuleClassResolver();
+        this.globalJavaResolverContext = new GlobalJavaResolverContext(lockBasedStorageManager, javaClassFinder, virtualFileFinder, deserializedDescriptorResolver, psiBasedExternalAnnotationResolver, traceBasedExternalSignatureResolver, traceBasedErrorReporter, psiBasedMethodSignatureChecker, lazyResolveBasedCache, javaPropertyInitializerEvaluator, singleModuleClassResolver);
+        this.lazyJavaPackageFragmentProvider = new LazyJavaPackageFragmentProvider(globalJavaResolverContext, getModule());
+        this.javaDescriptorResolver = new JavaDescriptorResolver(lazyJavaPackageFragmentProvider, getModule());
+        this.globalSearchScope = com.intellij.psi.search.GlobalSearchScope.projectScope(project);
+        this.annotationResolver = new AnnotationResolver();
+        this.callResolver = new CallResolver();
+        this.argumentTypeResolver = new ArgumentTypeResolver();
+        this.expressionTypingComponents = new ExpressionTypingComponents();
+        this.expressionTypingServices = new ExpressionTypingServices(expressionTypingComponents);
+        this.controlStructureTypingUtils = new ControlStructureTypingUtils(expressionTypingServices);
+        this.expressionTypingUtils = new ExpressionTypingUtils(expressionTypingServices, callResolver);
+        this.forLoopConventionsChecker = new ForLoopConventionsChecker();
+        this.reflectionTypes = new ReflectionTypes(getModule());
+        this.callExpressionResolver = new CallExpressionResolver();
+        this.descriptorResolver = new DescriptorResolver();
+        this.delegatedPropertyResolver = new DelegatedPropertyResolver();
+        this.typeResolver = new TypeResolver();
+        this.qualifiedExpressionResolver = new QualifiedExpressionResolver();
+        this.callResolverExtensionProvider = new CallResolverExtensionProvider();
+        this.candidateResolver = new CandidateResolver();
+        this.jetImportsFactory = new JetImportsFactory();
+        this.scopeProvider = new ScopeProvider(getResolveSession());
+        this.scriptBodyResolver = new ScriptBodyResolver();
+        this.javaClassDataFinder = new JavaClassDataFinder(virtualFileFinder, deserializedDescriptorResolver);
+        this.annotationDescriptorLoader = new AnnotationDescriptorLoader();
+        this.constantDescriptorLoader = new ConstantDescriptorLoader();
+        this.deserializationGlobalContextForJava = new DeserializationGlobalContextForJava(lockBasedStorageManager, getModule(), javaClassDataFinder, annotationDescriptorLoader, constantDescriptorLoader, lazyJavaPackageFragmentProvider);
+        this.descriptorLoadersStorage = new DescriptorLoadersStorage(lockBasedStorageManager);
 
-        throw new IllegalStateException();
+        this.resolveSession.setAnnotationResolve(annotationResolver);
+        this.resolveSession.setDescriptorResolver(descriptorResolver);
+        this.resolveSession.setJetImportFactory(jetImportsFactory);
+        this.resolveSession.setQualifiedExpressionResolver(qualifiedExpressionResolver);
+        this.resolveSession.setScopeProvider(scopeProvider);
+        this.resolveSession.setScriptBodyResolver(scriptBodyResolver);
+        this.resolveSession.setTypeResolver(typeResolver);
+
+        javaClassFinder.setProject(project);
+        javaClassFinder.setScope(globalSearchScope);
+
+        traceBasedExternalSignatureResolver.setExternalAnnotationResolver(psiBasedExternalAnnotationResolver);
+        traceBasedExternalSignatureResolver.setProject(project);
+        traceBasedExternalSignatureResolver.setTrace(bindingTrace);
+
+        lazyResolveBasedCache.setSession(resolveSession);
+
+        traceBasedErrorReporter.setTrace(bindingTrace);
+
+        psiBasedMethodSignatureChecker.setExternalAnnotationResolver(psiBasedExternalAnnotationResolver);
+        psiBasedMethodSignatureChecker.setExternalSignatureResolver(traceBasedExternalSignatureResolver);
+
+        singleModuleClassResolver.setResolver(javaDescriptorResolver);
+
+        annotationResolver.setCallResolver(callResolver);
+        annotationResolver.setStorageManager(lockBasedStorageManager);
+        annotationResolver.setTypeResolver(typeResolver);
+
+        callResolver.setArgumentTypeResolver(argumentTypeResolver);
+        callResolver.setCandidateResolver(candidateResolver);
+        callResolver.setExpressionTypingServices(expressionTypingServices);
+        callResolver.setTypeResolver(typeResolver);
+
+        argumentTypeResolver.setExpressionTypingServices(expressionTypingServices);
+        argumentTypeResolver.setTypeResolver(typeResolver);
+
+        expressionTypingServices.setAnnotationResolver(annotationResolver);
+        expressionTypingServices.setCallExpressionResolver(callExpressionResolver);
+        expressionTypingServices.setCallResolver(callResolver);
+        expressionTypingServices.setDescriptorResolver(descriptorResolver);
+        expressionTypingServices.setExtensionProvider(callResolverExtensionProvider);
+        expressionTypingServices.setProject(project);
+        expressionTypingServices.setTypeResolver(typeResolver);
+
+        expressionTypingComponents.setCallResolver(callResolver);
+        expressionTypingComponents.setControlStructureTypingUtils(controlStructureTypingUtils);
+        expressionTypingComponents.setExpressionTypingServices(expressionTypingServices);
+        expressionTypingComponents.setExpressionTypingUtils(expressionTypingUtils);
+        expressionTypingComponents.setForLoopConventionsChecker(forLoopConventionsChecker);
+        expressionTypingComponents.setGlobalContext(globalContext);
+        expressionTypingComponents.setPlatformToKotlinClassMap(platformToKotlinClassMap);
+        expressionTypingComponents.setReflectionTypes(reflectionTypes);
+
+        forLoopConventionsChecker.setExpressionTypingServices(expressionTypingServices);
+        forLoopConventionsChecker.setExpressionTypingUtils(expressionTypingUtils);
+        forLoopConventionsChecker.setProject(project);
+
+        callExpressionResolver.setExpressionTypingServices(expressionTypingServices);
+
+        descriptorResolver.setAnnotationResolver(annotationResolver);
+        descriptorResolver.setDelegatedPropertyResolver(delegatedPropertyResolver);
+        descriptorResolver.setExpressionTypingServices(expressionTypingServices);
+        descriptorResolver.setStorageManager(lockBasedStorageManager);
+        descriptorResolver.setTypeResolver(typeResolver);
+
+        delegatedPropertyResolver.setCallResolver(callResolver);
+        delegatedPropertyResolver.setExpressionTypingServices(expressionTypingServices);
+
+        typeResolver.setAnnotationResolver(annotationResolver);
+        typeResolver.setModuleDescriptor(module);
+        typeResolver.setQualifiedExpressionResolver(qualifiedExpressionResolver);
+
+        candidateResolver.setArgumentTypeResolver(argumentTypeResolver);
+
+        jetImportsFactory.setProject(project);
+
+        scriptBodyResolver.setExpressionTypingServices(expressionTypingServices);
+
+        deserializedDescriptorResolver.setContext(deserializationGlobalContextForJava);
+        deserializedDescriptorResolver.setErrorReporter(traceBasedErrorReporter);
+
+        annotationDescriptorLoader.setErrorReporter(traceBasedErrorReporter);
+        annotationDescriptorLoader.setKotlinClassFinder(virtualFileFinder);
+        annotationDescriptorLoader.setModule(module);
+        annotationDescriptorLoader.setStorage(descriptorLoadersStorage);
+
+        descriptorLoadersStorage.setErrorReporter(traceBasedErrorReporter);
+        descriptorLoadersStorage.setModule(module);
+
+        constantDescriptorLoader.setErrorReporter(traceBasedErrorReporter);
+        constantDescriptorLoader.setKotlinClassFinder(virtualFileFinder);
+        constantDescriptorLoader.setStorage(descriptorLoadersStorage);
+
+        javaClassFinder.initialize();
+
     }
     
     @PreDestroy

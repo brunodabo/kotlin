@@ -86,7 +86,7 @@ public class ConvertAssertToIfWithThrowIntention : JetSelfTargetingIntention<Jet
                 }
 
         val assertTypeRef = JetPsiFactory.createType(element.getProject(), "java.lang.AssertionError")
-        ShortenReferences.process(assertTypeRef)
+        ShortenReferences.processSyntheticElement(assertTypeRef, element)
 
         val text = "if (!true) { throw ${assertTypeRef.getText()}(${message}) }"
         val ifExpression = JetPsiFactory.createExpression(element.getProject(), text) as JetIfExpression

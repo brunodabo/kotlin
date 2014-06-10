@@ -20,6 +20,7 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ContentEntry;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.OrderRootType;
+import com.intellij.openapi.roots.impl.libraries.ProjectLibraryTable;
 import com.intellij.openapi.roots.libraries.Library;
 import com.intellij.openapi.vfs.VfsUtil;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +35,7 @@ public class ProjectDescriptorWithStdlibSources extends JetWithJdkAndRuntimeLigh
     public void configureModule(@NotNull Module module, @NotNull ModifiableRootModel model, @Nullable ContentEntry contentEntry) {
         super.configureModule(module, model, contentEntry);
 
-        Library library = model.getModuleLibraryTable().getLibraryByName(LIBRARY_NAME);
+        Library library = ProjectLibraryTable.getInstance(model.getProject()).getLibraryByName(LIBRARY_NAME);
         assert library != null;
         Library.ModifiableModel modifiableModel = library.getModifiableModel();
         modifiableModel.addRoot(VfsUtil.getUrlForLibraryRoot(new File("libraries/stdlib/src")), OrderRootType.SOURCES);

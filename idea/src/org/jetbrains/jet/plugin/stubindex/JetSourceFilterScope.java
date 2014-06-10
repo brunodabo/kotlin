@@ -17,6 +17,7 @@
 package org.jetbrains.jet.plugin.stubindex;
 
 import com.intellij.openapi.fileTypes.StdFileTypes;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -26,24 +27,25 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.plugin.JetFileType;
 import org.jetbrains.jet.plugin.JetPluginUtil;
 
+//TODO: pass project explicitly
 public class JetSourceFilterScope extends DelegatingGlobalSearchScope {
     @NotNull
-    public static GlobalSearchScope kotlinSourcesAndLibraries(@NotNull GlobalSearchScope delegate) {
-        return new JetSourceFilterScope(delegate, true);
+    public static GlobalSearchScope kotlinSourcesAndLibraries(@NotNull GlobalSearchScope delegate, @NotNull Project project) {
+        return new JetSourceFilterScope(delegate, true, project);
     }
 
     @NotNull
-    public static GlobalSearchScope kotlinSources(@NotNull GlobalSearchScope delegate) {
-        return new JetSourceFilterScope(delegate, false);
+    public static GlobalSearchScope kotlinSources(@NotNull GlobalSearchScope delegate, @NotNull Project project) {
+        return new JetSourceFilterScope(delegate, false, project);
     }
 
     private final ProjectFileIndex index;
     private final boolean includeLibraries;
 
-    private JetSourceFilterScope(@NotNull GlobalSearchScope delegate, boolean includeLibraries) {
+    private JetSourceFilterScope(@NotNull GlobalSearchScope delegate, boolean includeLibraries, @NotNull Project project) {
         super(delegate);
         this.includeLibraries = includeLibraries;
-        index = ProjectRootManager.getInstance(getProject()).getFileIndex();
+        index = ProjectRootManager.getInstance(project).getFileIndex();
     }
 
     @Override

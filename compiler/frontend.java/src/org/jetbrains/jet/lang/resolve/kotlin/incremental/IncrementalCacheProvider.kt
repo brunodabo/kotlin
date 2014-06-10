@@ -18,12 +18,16 @@ package org.jetbrains.jet.lang.resolve.kotlin.incremental
 
 import java.io.File
 import java.util.ServiceLoader
+import org.jetbrains.jet.config.IncrementalCompilation
 
 public trait IncrementalCacheProvider {
     public fun getIncrementalCache(baseDir: File): IncrementalCache
 
     public class object {
         public fun getInstance(): IncrementalCacheProvider? {
+            if (!IncrementalCompilation.ENABLED) {
+                return null
+            }
             val serviceLoader = ServiceLoader.load(javaClass<IncrementalCacheProvider>(), javaClass<IncrementalCacheProvider>().getClassLoader())
             val implementations = serviceLoader.toList()
             if (implementations.size > 1) {

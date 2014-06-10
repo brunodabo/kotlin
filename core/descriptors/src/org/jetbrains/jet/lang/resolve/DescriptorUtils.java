@@ -208,6 +208,9 @@ public class DescriptorUtils {
 
     @NotNull
     public static ModuleDescriptor getContainingModule(@NotNull DeclarationDescriptor descriptor) {
+        if (descriptor instanceof PackageViewDescriptor) {
+            return ((PackageViewDescriptor) descriptor).getModule();
+        }
         ModuleDescriptor module = getParentOfType(descriptor, ModuleDescriptor.class, false);
         assert module != null : "Descriptor without a containing module: " + descriptor;
         return module;

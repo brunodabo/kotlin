@@ -92,7 +92,7 @@ public class KotlinBuiltIns {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private final ModuleDescriptorImpl builtInsModule;
+    private final ModuleDescriptorImplX builtInsModule;
     private final BuiltinsPackageFragment builtinsPackageFragment;
 
     private volatile ImmutableSet<ClassDescriptor> nonPhysicalClasses;
@@ -108,11 +108,11 @@ public class KotlinBuiltIns {
     private final FqNames fqNames = new FqNames();
 
     private KotlinBuiltIns() {
-        builtInsModule = new ModuleDescriptorImpl(Name.special("<built-ins lazy module>"),
+        builtInsModule = new ModuleDescriptorImplX(Name.special("<built-ins lazy module>"),
                                                   Collections.<ImportPath>emptyList(),
                                                   PlatformToKotlinClassMap.EMPTY);
         builtinsPackageFragment = new BuiltinsPackageFragment(new LockBasedStorageManager(), builtInsModule);
-        builtInsModule.addFragmentProvider(DependencyKind.SOURCES, builtinsPackageFragment.getProvider());
+        builtInsModule.setPackageFragmentProviderForSources(builtinsPackageFragment.getProvider());
 
         functionClassesSet = computeIndexedClasses("Function", FUNCTION_TRAIT_COUNT);
         extensionFunctionClassesSet = computeIndexedClasses("ExtensionFunction", FUNCTION_TRAIT_COUNT);
@@ -155,7 +155,7 @@ public class KotlinBuiltIns {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @NotNull
-    public ModuleDescriptorImpl getBuiltInsModule() {
+    public ModuleDescriptor getBuiltInsModule() {
         return builtInsModule;
     }
 

@@ -39,10 +39,7 @@ import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar
 import com.intellij.openapi.roots.libraries.Library
 import com.intellij.openapi.module.impl.scopes.LibraryScope
 import org.jetbrains.jet.analyzer.new.ModuleInfo
-import org.jetbrains.jet.analyzer.new.PlatformModuleParameters
-import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.JdkOrderEntry
-import com.intellij.openapi.roots.impl.LibraryScopeCache
 import com.intellij.openapi.module.impl.scopes.JdkScope
 
 private abstract class PluginModuleInfo : ModuleInfo<PluginModuleInfo>
@@ -107,7 +104,8 @@ fun createMappingForProject(
     val modulesSources = ideaModules.keysToMap { ModuleSourcesInfo(it) }
     val ideaLibraries = LibraryTablesRegistrar.getInstance()!!.getLibraryTable(project).getLibraries().toList()
     val libraries = ideaLibraries.keysToMap { LibraryInfo(it) }
-    val modules = modulesSources.values() + libraries.values()
+    val sdkInfos = ideaModules.keysToMap { (ModuleRootManager.getInstance(it).getOrderEntries().find { it is JdkOrderEntry } as JdkOrderEntry).let { SdkInfo(it) } }
+    val modules = modulesSources.values() + libraries.values() + sdkInfos.values()
     val jvmPlatformParameters = {(module: PluginModuleInfo) ->
         val scope = when (module) {
             is ModuleSourcesInfo -> GlobalSearchScope.moduleScope(module.module)

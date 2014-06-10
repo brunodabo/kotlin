@@ -40,6 +40,10 @@ import com.intellij.openapi.roots.libraries.Library
 import com.intellij.openapi.module.impl.scopes.LibraryScope
 import org.jetbrains.jet.analyzer.new.ModuleInfo
 import org.jetbrains.jet.analyzer.new.PlatformModuleParameters
+import com.intellij.openapi.projectRoots.Sdk
+import com.intellij.openapi.roots.JdkOrderEntry
+import com.intellij.openapi.roots.impl.LibraryScopeCache
+import com.intellij.openapi.module.impl.scopes.JdkScope
 
 private abstract class PluginModuleInfo : ModuleInfo<PluginModuleInfo>
 
@@ -66,6 +70,10 @@ private data class ModuleSourcesInfo(val module: Module) : PluginModuleInfo() {
                     }
                     LibraryInfo(library)
                 }
+                is JdkOrderEntry -> {
+                    //TODO: null?
+                    SdkInfo(orderEntry)
+                }
                 else -> {
                     null
                 }
@@ -76,6 +84,13 @@ private data class ModuleSourcesInfo(val module: Module) : PluginModuleInfo() {
 
 private data class LibraryInfo(val library: Library) : PluginModuleInfo() {
     override val name: Name = Name.special("<library ${library.getName()}>")
+
+    override fun dependencies(): List<ModuleInfo<PluginModuleInfo>> = listOf()
+}
+
+private data class SdkInfo(/*TODO: param name*/val sdk: JdkOrderEntry) : PluginModuleInfo() {
+    //TODO: null?
+    override val name: Name = Name.special("<library ${sdk.getJdk()!!.getName()}>")
 
     override fun dependencies(): List<ModuleInfo<PluginModuleInfo>> = listOf()
 }
@@ -97,6 +112,7 @@ fun createMappingForProject(
         val scope = when (module) {
             is ModuleSourcesInfo -> GlobalSearchScope.moduleScope(module.module)
             is LibraryInfo -> LibraryScope(project, module.library)
+            is SdkInfo -> JdkScope(project, module.sdk)
             else -> throw IllegalStateException()
         }
 

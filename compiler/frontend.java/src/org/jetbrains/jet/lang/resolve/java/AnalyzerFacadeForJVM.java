@@ -104,6 +104,7 @@ public enum AnalyzerFacadeForJVM implements AnalyzerFacade {
 
         resolveWithJava.getModule().addFragmentProvider(
                 DependencyKind.BINARIES, resolveWithJava.getJavaDescriptorResolver().getPackageFragmentProvider());
+        resolveWithJava.getModule().setPackageFragmentProviderForSources(resolveWithJava.getResolveSession().getPackageFragmentProvider());
 
         if (addBuiltIns) {
             resolveWithJava.getModule().addFragmentProvider(

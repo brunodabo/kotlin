@@ -20,7 +20,9 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ContentEntry;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.OrderRootType;
+import com.intellij.openapi.roots.impl.libraries.ProjectLibraryTable;
 import com.intellij.openapi.roots.libraries.Library;
+import com.intellij.openapi.roots.libraries.LibraryTable;
 import com.intellij.openapi.util.io.FileUtilRt;
 import org.jetbrains.jet.MockLibraryUtil;
 
@@ -40,12 +42,17 @@ public class JdkAndMockLibraryProjectDescriptor extends JetLightProjectDescripto
         File libraryJar = MockLibraryUtil.compileLibraryToJar(sourcesPath, withSources);
         String jarUrl = "jar://" + FileUtilRt.toSystemIndependentName(libraryJar.getAbsolutePath()) + "!/";
 
-        Library.ModifiableModel libraryModel = model.getModuleLibraryTable().getModifiableModel().createLibrary("myKotlinLib").getModifiableModel();
+        //TODO: very questionable even if it works
+        LibraryTable.ModifiableModel libraryTableModel = ProjectLibraryTable.getInstance(module.getProject()).getModifiableModel();
+        Library newLibrary = libraryTableModel.createLibrary("myKotlinLib");
+        Library.ModifiableModel libraryModel = newLibrary.getModifiableModel();
         libraryModel.addRoot(jarUrl, OrderRootType.CLASSES);
         if (withSources) {
             libraryModel.addRoot(jarUrl + "src/", OrderRootType.SOURCES);
         }
         libraryModel.commit();
+        libraryTableModel.commit();
+        model.addLibraryEntry(newLibrary);
     }
 
 

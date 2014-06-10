@@ -41,6 +41,7 @@ import org.jetbrains.jet.utils.keysToMap
 import com.intellij.psi.PsiMethod
 import org.jetbrains.jet.plugin.search.allScope
 import org.jetbrains.jet.plugin.caches.resolve.getBindingContext
+import org.jetbrains.jet.lang.resolve.CompositeBindingContext
 
 public trait JetReference : PsiPolyVariantReference {
     public fun resolveToDescriptors(): Collection<DeclarationDescriptor>
@@ -112,11 +113,11 @@ abstract class AbstractJetReference<T : JetElement>(element: T)
         return Collections.emptySet()
     }
 
-    //TODO: unused parameter
     private fun resolveToPsiElements(context: BindingContext, targetDescriptor: DeclarationDescriptor): Collection<PsiElement> {
         val result = HashSet<PsiElement>()
         val project = expression.getProject()
-        val bindingContext = targetDescriptor.getBindingContext(project)
+        //TODO: CompositeBindingContext is redundant here, can be clearer
+        val bindingContext = CompositeBindingContext.create(listOf(context, targetDescriptor.getBindingContext(project)).filterNotNull())
         if (bindingContext != null) {
             result.addAll(BindingContextUtils.descriptorToDeclarations(bindingContext, targetDescriptor))
         }

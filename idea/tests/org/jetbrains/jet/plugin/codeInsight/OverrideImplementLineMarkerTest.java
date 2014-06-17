@@ -16,20 +16,29 @@
 
 package org.jetbrains.jet.plugin.codeInsight;
 
+import com.intellij.codeInsight.daemon.GutterIconNavigationHandler;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.NavigatablePsiElement;
 import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
 import com.intellij.rt.execution.junit.FileComparisonFailure;
 import com.intellij.testFramework.ExpectedHighlightingData;
 import junit.framework.AssertionFailedError;
 import org.jetbrains.jet.JetTestUtils;
+import org.jetbrains.jet.lang.psi.JetElement;
 import org.jetbrains.jet.plugin.JetLightCodeInsightFixtureTestCase;
 import org.jetbrains.jet.plugin.PluginTestCaseBase;
+import org.jetbrains.jet.plugin.highlighter.JetLineMarkerProvider;
+import org.jetbrains.jet.plugin.libraries.NavigateToLibrarySourceTest;
 import org.jetbrains.jet.testing.HighlightTestDataUtil;
 
+import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureTestCase {
@@ -78,13 +87,38 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
         doTest();
     }
 
+    public void testOverrideIconForOverloadMethodBug() {
+        doTest();
+    }
+
+    public void testOverloads() {
+        doTest();
+    }
+
+    public void testToStringInTrait() {
+        doTest();
+    }
+
+    public void testNavigateToSeveralSuperElements() {
+        doTest();
+    }
+
+    public void testFakeOverridesForTraitFunWithImpl() {
+        doTest();
+    }
+
+    public void testFakeOverrideToStringInTrait() {
+        doTest();
+    }
+
     private void doTest() {
         try {
             myFixture.configureByFile(fileName());
             Project project = myFixture.getProject();
             Document document = myFixture.getEditor().getDocument();
 
-            ExpectedHighlightingData data = new ExpectedHighlightingData(document, false, false, false, myFixture.getFile());
+            ExpectedHighlightingData data = new ExpectedHighlightingData(
+                    document, false, false, false, myFixture.getFile());
             data.init();
 
             PsiDocumentManager.getInstance(project).commitAllDocuments();
@@ -95,6 +129,7 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
 
             try {
                 data.checkLineMarkers(markers, document.getText());
+                assertNavigationElements(markers);
             }
             catch (AssertionError error) {
                 try {
@@ -112,5 +147,31 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
         catch (Exception exc) {
             throw new RuntimeException(exc);
         }
+    }
+
+    private void assertNavigationElements(List<LineMarkerInfo> markers) {
+        //String expectedNavigationData = getExpectedSuperDeclarationNavigationData();
+        //if (expectedNavigationData.isEmpty()) return;
+        //
+        //Collection<PsiElement> navigateElements = new ArrayList<PsiElement>();
+        //for (LineMarkerInfo marker : markers) {
+        //    PsiElement element = marker.getElement();
+        //    GutterIconNavigationHandler handler = marker.getNavigationHandler();
+        //
+        //    if (handler instanceof JetLineMarkerProvider.KotlinSuperNavigationHandler) {
+        //        //noinspection unchecked
+        //        handler.navigate(null, element);
+        //        navigateElements.addAll(((JetLineMarkerProvider.KotlinSuperNavigationHandler) handler).getNavigationElements());
+        //    }
+        //}
+        //String actualNavigationData = NavigateToLibrarySourceTest.getActualAnnotatedLibraryCode(myFixture.getProject(), navigateElements);
+        //
+        //assertSameLines(expectedNavigationData, actualNavigationData);
+    }
+
+    private String getExpectedSuperDeclarationNavigationData() {
+        Document document = myFixture.getDocument(myFixture.getFile());
+        assertNotNull(document);
+        return JetTestUtils.getLastCommentedLines(document);
     }
 }

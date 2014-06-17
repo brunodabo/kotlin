@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2013 JetBrains s.r.o.
+ * Copyright 2010-2014 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.jetbrains.jet.plugin.libraries;
 
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.EditorFactory;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -26,6 +27,8 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import com.intellij.testFramework.LightProjectDescriptor;
+import com.intellij.util.Function;
+import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.MultiMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.JetTestUtils;
@@ -109,7 +112,7 @@ public class NavigateToLibrarySourceTest extends AbstractNavigateToLibraryTest {
 
     private void checkAnnotatedLibraryCode(boolean forceResolve) {
         JetSourceNavigationHelper.setForceResolve(forceResolve);
-        String actualCode = getActualAnnotatedLibraryCode();
+        String actualCode = getActualAnnotatedLibraryCode(myFixture.getProject(), collectInterestingNavigationElements());
         String expectedCode = getExpectedAnnotatedLibraryCode();
         assertSameLines(expectedCode, actualCode);
     }
@@ -134,13 +137,21 @@ public class NavigateToLibrarySourceTest extends AbstractNavigateToLibraryTest {
         return referenceContainersToReferences.values();
     }
 
-    private String getActualAnnotatedLibraryCode() {
+    private Collection<PsiElement> collectInterestingNavigationElements() {
+        return ContainerUtil.map(collectInterestingReferences(), new Function<JetReference, PsiElement>() {
+            @Override
+            public PsiElement fun(JetReference reference) {
+                PsiElement target = reference.resolve();
+                assertNotNull(target);
+                return target.getNavigationElement();
+            }
+        });
+    }
+
+    public static String getActualAnnotatedLibraryCode(Project project, Collection<? extends PsiElement> navigableElements) {
         MultiMap<PsiFile, Pair<Integer, Integer>> filesToNumbersAndOffsets = new MultiMap<PsiFile, Pair<Integer, Integer>>();
         int refNumber = 1;
-        for (JetReference ref : collectInterestingReferences()) {
-            PsiElement target = ref.resolve();
-            assertNotNull(target);
-            PsiElement navigationElement = target.getNavigationElement();
+        for (PsiElement navigationElement : navigableElements) {
             Pair<Integer, Integer> numberAndOffset = new Pair<Integer, Integer>(refNumber++, navigationElement.getTextOffset());
             filesToNumbersAndOffsets.putValue(navigationElement.getContainingFile(), numberAndOffset);
         }
@@ -169,7 +180,7 @@ public class NavigateToLibrarySourceTest extends AbstractNavigateToLibraryTest {
                 }
             }));
 
-            Document document = PsiDocumentManager.getInstance(getProject()).getDocument(file);
+            Document document = PsiDocumentManager.getInstance(project).getDocument(file);
             assertNotNull(document);
             StringBuilder resultForFile = new StringBuilder(document.getText());
             for (Pair<Integer, Integer> numberOffset : numbersAndOffsets) {

@@ -43,7 +43,7 @@
 
     <target name="jb_update_continuous_local" depends="fetch-third-party,fetch-annotations">
         <execute_update
-            base.url="http://buildserver.labs.intellij.net/guestAuth/repository/download/ijplatform_IjPlatform13_IdeaTrunk_Installers/${continuous.idea.version}"
+            base.url="http://buildserver.labs.intellij.net/guestAuth/repository/download/IDEA_Trunk_Installers/${continuous.idea.version}"
             build.zip="ideaIC-{build.number}.win.zip"
         />
     </target>
@@ -265,7 +265,7 @@
                     <get src="@{base.url}/core/trove4j.jar" dest="${core}/trove4j.jar" usetimestamp="true"/>
                     <!--<get src="@{base.url}/core/snappy-java-1.0.5.jar" dest="${core}/snappy-java-1.0.5.jar" usetimestamp="true"/>-->
 
-                    <get src="@{base.url}/jps/standalone-jps-IC-${idea.build.number}.zip"
+                    <get src="@{base.url}/jps/standalone-jps-${idea.build.number}.zip"
                          dest="dependencies/download/standalone-jps.zip"
                          usetimestamp="true" />
 
@@ -290,7 +290,7 @@
                       </resources>
                     </copy>
 
-                    <get src="@{base.url}/jps/jps-build-test-IC-${idea.build.number}.jar" dest="${jps-test}/jps-build-test.jar" usetimestamp="true"/>
+                    <get src="@{base.url}/jps/jps-build-test-${idea.build.number}.jar" dest="${jps-test}/jps-build-test.jar" usetimestamp="true"/>
 
                     <get src="@{base.url}/@{build.zip}" dest="dependencies/download/@{build.zip}" usetimestamp="true"/>
 

@@ -98,29 +98,9 @@ public class LazyJavaPackageFragmentProvider(
 
     override fun getSubPackagesOf(fqName: FqName) = getPackageFragment(fqName)?.getMemberScope()?.getSubPackages().orEmpty()
 
-    override fun getClassNamesInPackage(packageName: FqName) = getPackageFragment(packageName)?.getMemberScope()?.getAllClassNames().orEmpty()
-
-    internal val resolveKotlinBinaryClass = c.storageManager.createMemoizedFunctionWithNullableValues {
-        (kotlinClass: KotlinJvmBinaryClass) -> c.deserializedDescriptorResolver.resolveClass(kotlinClass)
-    }
+    fun resolveKotlinBinaryClass(kotlinClass: KotlinJvmBinaryClass) = c.deserializedDescriptorResolver.resolveClass(kotlinClass)
 
     fun getClass(javaClass: JavaClass): ClassDescriptor? = c.javaClassResolver.resolveClass(javaClass)
-
-    fun getClass(fqName: FqName): ClassDescriptor? {
-        val builtinClass = DescriptorResolverUtils.getKotlinBuiltinClassDescriptor(fqName)
-        if (builtinClass != null) return builtinClass
-
-        // TODO Here we prefer sources (something outside JDR subsystem) to binaries, which should actually be driven by module dependencies separation
-        // See DeserializedDescriptorResolver.javaDescriptorFinder
-        val classFromSources = c.javaResolverCache.getClassResolvedFromSource(fqName)
-        if (classFromSources != null) return classFromSources
-
-        val (jClass, kClass) = c.findClassInJava(fqName)
-        if (jClass != null) return c.javaClassResolver.resolveClass(jClass)
-        if (kClass != null) return kClass
-
-        return null
-    }
 
     private inner class FragmentClassResolver : LazyJavaClassResolver {
         override fun resolveClass(javaClass: JavaClass): ClassDescriptor? {

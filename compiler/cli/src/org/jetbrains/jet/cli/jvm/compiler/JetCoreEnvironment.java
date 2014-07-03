@@ -55,7 +55,6 @@ import org.jetbrains.jet.config.CompilerConfiguration;
 import org.jetbrains.jet.lang.parsing.JetParserDefinition;
 import org.jetbrains.jet.lang.parsing.JetScriptDefinitionProvider;
 import org.jetbrains.jet.lang.psi.JetFile;
-import org.jetbrains.jet.lang.resolve.java.JetFilesProvider;
 import org.jetbrains.jet.lang.resolve.kotlin.KotlinBinaryClassCache;
 import org.jetbrains.jet.lang.resolve.kotlin.VirtualFileFinder;
 import org.jetbrains.jet.lang.resolve.lazy.declarations.CliDeclarationProviderFactoryService;
@@ -152,8 +151,6 @@ public class JetCoreEnvironment {
 
         applicationEnvironment.getApplication().registerService(OperationModeProvider.class, new CompilerModeProvider());
         applicationEnvironment.getApplication().registerService(KotlinBinaryClassCache.class, new KotlinBinaryClassCache());
-        applicationEnvironment.getApplication().registerService(DeclarationProviderFactoryService.class,
-                                                                new CliDeclarationProviderFactoryService());
 
         return applicationEnvironment;
     }
@@ -178,7 +175,6 @@ public class JetCoreEnvironment {
 
         MockProject project = projectEnvironment.getProject();
         project.registerService(JetScriptDefinitionProvider.class, new JetScriptDefinitionProvider());
-        project.registerService(JetFilesProvider.class, new CliJetFilesProvider(this));
         project.registerService(CoreJavaFileManager.class, (CoreJavaFileManager) ServiceManager.getService(project, JavaFileManager.class));
 
         CliLightClassGenerationSupport cliLightClassGenerationSupport = new CliLightClassGenerationSupport();
@@ -219,6 +215,7 @@ public class JetCoreEnvironment {
                 configuration.getList(CommonConfigurationKeys.SCRIPT_DEFINITIONS_KEY));
 
         project.registerService(VirtualFileFinder.class, new CliVirtualFileFinder(classPath));
+        project.registerService(DeclarationProviderFactoryService.class, new CliDeclarationProviderFactoryService(sourceFiles));
     }
 
     public CompilerConfiguration getConfiguration() {

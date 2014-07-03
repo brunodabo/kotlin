@@ -119,12 +119,6 @@
     <applicationService serviceInterface="org.jetbrains.jet.lang.resolve.kotlin.KotlinBinaryClassCache"
                         serviceImplementation="org.jetbrains.jet.lang.resolve.kotlin.KotlinBinaryClassCache"/>
 
-    <applicationService serviceInterface="org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService"
-                        serviceImplementation="org.jetbrains.jet.plugin.stubindex.resolve.PluginDeclarationProviderFactoryService"/>
-
-    <projectService serviceInterface="org.jetbrains.jet.lang.resolve.java.JetFilesProvider"
-                    serviceImplementation="org.jetbrains.jet.plugin.project.PluginJetFilesProvider"/>
-
     <projectService serviceInterface="org.jetbrains.jet.plugin.caches.resolve.KotlinCacheService"
                     serviceImplementation="org.jetbrains.jet.plugin.caches.resolve.KotlinCacheService"/>
 
@@ -157,6 +151,9 @@
 
     <projectService serviceInterface="org.jetbrains.jet.plugin.debugger.evaluate.KotlinEvaluateExpressionCache"
                     serviceImplementation="org.jetbrains.jet.plugin.debugger.evaluate.KotlinEvaluateExpressionCache"/>
+
+    <projectService serviceInterface="org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService"
+                    serviceImplementation="org.jetbrains.jet.plugin.stubindex.resolve.PluginDeclarationProviderFactoryService"/>
 
     <errorHandler implementation="org.jetbrains.jet.plugin.reporter.KotlinReportSubmitter"/>
 

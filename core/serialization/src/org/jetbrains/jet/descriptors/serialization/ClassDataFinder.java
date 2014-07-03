@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package org.jetbrains.jet.lang.types;
+package org.jetbrains.jet.descriptors.serialization;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
-import org.jetbrains.jet.lang.resolve.name.FqName;
 
-public interface DependencyClassByQualifiedNameResolver {
+public interface ClassDataFinder {
     @Nullable
-    ClassDescriptor resolveClass(@NotNull FqName qualifiedName);
+    ClassData findClassData(@NotNull ClassId classId);
 }

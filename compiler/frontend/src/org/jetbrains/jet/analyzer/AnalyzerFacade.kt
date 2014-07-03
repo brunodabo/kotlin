@@ -53,6 +53,15 @@ public trait PlatformModuleParameters
 public trait ModuleInfo<T : ModuleInfo<T>> {
     val name: Name
     fun dependencies(): List<ModuleInfo<T>>
+    fun dependencyOnBuiltins(): DependencyOnBuiltins = DependenciesOnBuiltins.LAST
+
+    //TODO: modifyDependencies(OrderedMap [ModuleInfo -> ModuleDescriptor])
+    public trait DependencyOnBuiltins
+
+    public enum class DependenciesOnBuiltins: DependencyOnBuiltins {
+        NONE
+        LAST
+    }
 }
 
 public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters> {
@@ -86,8 +95,10 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
                     val dependencyDescriptor = resolverForProject.descriptorByModule[dependency]!!
                     currentModule.addDependencyOnModule(dependencyDescriptor)
                 }
-                //TODO:
-                currentModule.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+                //TODO: more
+                when (module.dependencyOnBuiltins()) {
+                    is ModuleInfo.DependenciesOnBuiltins.LAST -> currentModule.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+                }
             }
         }
 

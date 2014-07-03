@@ -30,21 +30,21 @@ import org.jetbrains.jet.context.GlobalContext
 import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns
 
 //TODO: ResolverForModule
-public trait Analyzer {
+public trait ResolverForModule {
     public val lazyResolveSession: ResolveSession
 }
 
 //TODO: ResolverForProject
-public trait AnalysisSetup<M, A : Analyzer> {
+public trait ResolverForProject<M, A : ResolverForModule> {
     public val analyzerByModuleDescriptor: Map<ModuleDescriptor, A>
     public val descriptorByModule: Map<M, ModuleDescriptor>
     public val moduleByDescriptor: Map<ModuleDescriptor, M>
 }
 
-public class AnalysisSetupImpl<M, A : Analyzer>(
+public class ResolverForProjectImpl<M, A : ResolverForModule>(
         public override val descriptorByModule: Map<M, ModuleDescriptorImplX>,
         public override val moduleByDescriptor: Map<ModuleDescriptor, M>
-) : AnalysisSetup<M, A> {
+) : ResolverForProject<M, A> {
     override val analyzerByModuleDescriptor: MutableMap<ModuleDescriptor, A> = HashMap()
 }
 
@@ -55,15 +55,15 @@ public trait ModuleInfo<T : ModuleInfo<T>> {
     fun dependencies(): List<ModuleInfo<T>>
 }
 
-public trait AnalyzerFacade<A : Analyzer, P : PlatformModuleParameters> {
-    public fun <M: ModuleInfo<M>> setupAnalysis(
+public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters> {
+    public fun <M: ModuleInfo<M>> setupResolverForProject(
             globalContext: GlobalContext,
             project: Project,
             modules: Collection<M>,
             platformParameters: (M) -> P
-    ): AnalysisSetup<M, A> {
+    ): ResolverForProject<M, A> {
 
-        fun createSetup(): AnalysisSetupImpl<M, A> {
+        fun createResolverForProject(): ResolverForProjectImpl<M, A> {
             val descriptorByModule = HashMap<M, ModuleDescriptorImplX>()
             val moduleByDescriptor = HashMap<ModuleDescriptor, M>()
             modules.forEach {
@@ -72,18 +72,18 @@ public trait AnalyzerFacade<A : Analyzer, P : PlatformModuleParameters> {
                 descriptorByModule[module] = descriptor
                 moduleByDescriptor[descriptor] = module
             }
-            return AnalysisSetupImpl(descriptorByModule, moduleByDescriptor)
+            return ResolverForProjectImpl(descriptorByModule, moduleByDescriptor)
         }
 
-        val analysisSetup = createSetup()
+        val resolverForProject = createResolverForProject()
 
         fun setupModuleDependencies() {
             modules.forEach {
                 module ->
-                val currentModule = analysisSetup.descriptorByModule[module]!!
+                val currentModule = resolverForProject.descriptorByModule[module]!!
                 module.dependencies().forEach {
                     dependency ->
-                    val dependencyDescriptor = analysisSetup.descriptorByModule[dependency]!!
+                    val dependencyDescriptor = resolverForProject.descriptorByModule[dependency]!!
                     currentModule.addDependencyOnModule(dependencyDescriptor)
                 }
                 //TODO:
@@ -93,22 +93,22 @@ public trait AnalyzerFacade<A : Analyzer, P : PlatformModuleParameters> {
 
         setupModuleDependencies()
 
-        fun initializeAnalysisSetup() {
+        fun initializeResolverForProject() {
             modules.forEach {
                 module ->
-                val descriptor = analysisSetup.descriptorByModule[module]!!
+                val descriptor = resolverForProject.descriptorByModule[module]!!
                 //TODO: communicate information that package fragment provider for sources has to be set
-                val analyzer = createAnalyzerForModule(project, globalContext, descriptor, platformParameters(module), analysisSetup)
-                analysisSetup.analyzerByModuleDescriptor[descriptor] = analyzer
+                val analyzer = createResolverForModule(project, globalContext, descriptor, platformParameters(module), resolverForProject)
+                resolverForProject.analyzerByModuleDescriptor[descriptor] = analyzer
             }
         }
 
-        initializeAnalysisSetup()
-        return analysisSetup
+        initializeResolverForProject()
+        return resolverForProject
     }
 
-    protected fun <M> createAnalyzerForModule(project: Project, globalContext: GlobalContext, moduleDescriptor: ModuleDescriptorBase,
-                                              platformParameters: P, setup: AnalysisSetup<M, A>): A
+    protected fun <M> createResolverForModule(project: Project, globalContext: GlobalContext, moduleDescriptor: ModuleDescriptorBase,
+                                              platformParameters: P, setup: ResolverForProject<M, A>): A
 
     public val defaultImports: List<ImportPath>
     public val platformToKotlinClassMap: PlatformToKotlinClassMap

@@ -97,7 +97,9 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
                 }
                 //TODO: more
                 when (module.dependencyOnBuiltins()) {
-                    is ModuleInfo.DependenciesOnBuiltins.LAST -> currentModule.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+                    ModuleInfo.DependenciesOnBuiltins.LAST -> {
+                        currentModule.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+                    }
                 }
             }
         }

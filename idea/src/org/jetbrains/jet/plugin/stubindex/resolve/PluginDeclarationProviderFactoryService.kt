@@ -22,6 +22,7 @@ import org.jetbrains.jet.lang.psi.JetFile
 import org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactory
 import org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService
 import org.jetbrains.jet.storage.StorageManager
+import org.jetbrains.jet.plugin.stubindex.JetSourceFilterScope
 
 public class PluginDeclarationProviderFactoryService : DeclarationProviderFactoryService() {
 
@@ -31,6 +32,6 @@ public class PluginDeclarationProviderFactoryService : DeclarationProviderFactor
             syntheticFiles: Collection<JetFile>,
             filesScope: GlobalSearchScope
     ): DeclarationProviderFactory {
-        return PluginDeclarationProviderFactory(project, filesScope, storageManager, syntheticFiles)
+        return PluginDeclarationProviderFactory(project, JetSourceFilterScope.kotlinSources(filesScope), storageManager, syntheticFiles)
     }
 }

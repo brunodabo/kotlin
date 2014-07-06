@@ -1,0 +1,8 @@
+>>> class A {
+...     fun foo() = "Fail"
+... }
+>>> class A {
+...     fun foo() = "OK"
+... }
+>>> A().foo()
+OK

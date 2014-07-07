@@ -17,25 +17,35 @@
 package org.jetbrains.jet.lang.descriptors.impl;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
 import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
 import org.jetbrains.jet.lang.descriptors.PropertyDescriptor;
 import org.jetbrains.jet.lang.descriptors.SimpleFunctionDescriptor;
 
-public interface PackageLikeBuilder {
+public class PackageLikeBuilderDummy implements PackageLikeBuilder {
     @NotNull
-    DeclarationDescriptor getOwnerForChildren();
-
-    void addClassifierDescriptor(@NotNull MutableClassDescriptor classDescriptor);
-
-    void addFunctionDescriptor(@NotNull SimpleFunctionDescriptor functionDescriptor);
-
-    void addPropertyDescriptor(@NotNull PropertyDescriptor propertyDescriptor);
-
-    enum ClassObjectStatus {
-        OK,
-        DUPLICATE,
-        NOT_ALLOWED
+    @Override
+    public DeclarationDescriptor getOwnerForChildren() {
+        throw new IllegalStateException();
     }
 
-    ClassObjectStatus setClassObjectDescriptor(@NotNull MutableClassDescriptor classObjectDescriptor);
+    @Override
+    public void addClassifierDescriptor(@NotNull MutableClassDescriptor classDescriptor) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public void addFunctionDescriptor(@NotNull SimpleFunctionDescriptor functionDescriptor) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public void addPropertyDescriptor(@NotNull PropertyDescriptor propertyDescriptor) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public ClassObjectStatus setClassObjectDescriptor(@NotNull ClassDescriptor classObjectDescriptor) {
+        throw new IllegalStateException();
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2013 JetBrains s.r.o.
+ * Copyright 2010-2014 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,28 @@
  * limitations under the License.
  */
 
-package org.jetbrains.jet.lang.resolve.scopes;
+package org.jetbrains.jet.lang.descriptors;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.ReadOnly;
+import org.jetbrains.jet.lang.resolve.scopes.JetScope;
 
-public class JetScopeAdapter extends AbstractScopeAdapter {
+import java.util.Collection;
+
+public interface ClassDescriptorWithResolutionScopes extends ClassDescriptor {
     @NotNull
-    private final JetScope workerScope;
-
-    public JetScopeAdapter(@NotNull JetScope workerScope) {
-        this.workerScope = workerScope;
-    }
+    JetScope getScopeForClassHeaderResolution();
 
     @NotNull
-    @Override
-    protected final JetScope getWorkerScope() {
-        return workerScope;
-    }
+    JetScope getScopeForMemberDeclarationResolution();
+
+    @NotNull
+    JetScope getScopeForInitializerResolution();
+
+    @NotNull
+    JetScope getScopeForMemberLookup();
+
+    @NotNull
+    @ReadOnly
+    Collection<CallableMemberDescriptor> getDeclaredCallableMembers();
 }

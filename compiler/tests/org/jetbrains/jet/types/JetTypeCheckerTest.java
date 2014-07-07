@@ -28,7 +28,11 @@ import org.jetbrains.jet.cli.jvm.compiler.JetCoreEnvironment;
 import org.jetbrains.jet.di.InjectorForJavaDescriptorResolver;
 import org.jetbrains.jet.di.InjectorForJavaDescriptorResolverUtil;
 import org.jetbrains.jet.di.InjectorForTests;
-import org.jetbrains.jet.lang.descriptors.*;
+import org.jetbrains.jet.lang.descriptors.DependencyKind;
+import org.jetbrains.jet.lang.descriptors.ModuleDescriptor;
+import org.jetbrains.jet.lang.descriptors.PackageViewDescriptor;
+import org.jetbrains.jet.lang.descriptors.ReceiverParameterDescriptor;
+import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.descriptors.impl.ReceiverParameterDescriptorImpl;
 import org.jetbrains.jet.lang.psi.JetExpression;
 import org.jetbrains.jet.lang.psi.JetPsiFactory;
@@ -543,7 +547,13 @@ public class JetTypeCheckerTest extends JetLiteFixture {
 
     private void assertType(String contextType, final String expression, String expectedType) {
         final JetType thisType = makeType(contextType);
-        JetScope scope = new JetScopeAdapter(scopeWithImports) {
+        JetScope scope = new AbstractScopeAdapter() {
+            @NotNull
+            @Override
+            protected JetScope getWorkerScope() {
+                return scopeWithImports;
+            }
+
             @NotNull
             @Override
             public List<ReceiverParameterDescriptor> getImplicitReceiversHierarchy() {

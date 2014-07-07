@@ -17,14 +17,16 @@
 package org.jetbrains.jet.lang.types.lang;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.CallableDescriptor;
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
+import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
 import org.jetbrains.jet.lang.descriptors.ValueParameterDescriptor;
 import org.jetbrains.jet.lang.descriptors.annotations.AnnotationDescriptor;
-import org.jetbrains.jet.lang.descriptors.annotations.Annotations;
+import org.jetbrains.jet.lang.resolve.constants.ArrayValue;
 import org.jetbrains.jet.lang.resolve.constants.CompileTimeConstant;
 import org.jetbrains.jet.lang.resolve.constants.EnumValue;
+
+import java.util.List;
 
 public class InlineUtil {
 
@@ -34,13 +36,11 @@ public class InlineUtil {
     }
 
     @NotNull
-    public static InlineStrategy getInlineType(@Nullable Annotations annotations) {
-        KotlinBuiltIns builtIns = KotlinBuiltIns.getInstance();
-        ClassDescriptor annotationClass = builtIns.getInlineClassAnnotation();
-        AnnotationDescriptor annotation = getAnnotation(annotations, annotationClass);
+    public static InlineStrategy getInlineType(@NotNull DeclarationDescriptor descriptor) {
+        ClassDescriptor annotationClass = KotlinBuiltIns.getInstance().getInlineClassAnnotation();
+        AnnotationDescriptor annotation = AnnotationUtil.instance$.getAnnotation(descriptor.getAnnotations(), annotationClass);
         if (annotation != null) {
-            ValueParameterDescriptor parameterDescriptor = annotationClass.getConstructors().iterator().next().getValueParameters().get(0);
-            CompileTimeConstant<?> argument = annotation.getValueArgument(parameterDescriptor);
+            CompileTimeConstant<?> argument = AnnotationUtil.instance$.getAnnotationSingleArgument(descriptor, annotationClass);
             if (argument == null) {
                 //default parameter
                 return InlineStrategy.AS_FUNCTION;
@@ -56,18 +56,32 @@ public class InlineUtil {
         }
     }
 
-    @Nullable
-    private static AnnotationDescriptor getAnnotation(@Nullable Annotations annotations, @NotNull ClassDescriptor annotationClass) {
-        if (annotations != null) {
-            for (AnnotationDescriptor annotation : annotations) {
-                if (annotationClass.equals(annotation.getType().getConstructor().getDeclarationDescriptor())) {
-                    return annotation;
+    public static boolean hasOnlyLocalContinueAndBreak(@NotNull ValueParameterDescriptor descriptor) {
+        return hasInlineOption(descriptor, InlineOption.LOCAL_CONTINUE_AND_BREAK);
+    }
+
+    public static boolean hasOnlyLocalReturn(@NotNull ValueParameterDescriptor descriptor) {
+        return hasInlineOption(descriptor, InlineOption.ONLY_LOCAL_RETURN);
+    }
+
+    private static boolean hasInlineOption(@NotNull ValueParameterDescriptor descriptor, @NotNull InlineOption option) {
+        CompileTimeConstant<?> argument =
+                AnnotationUtil.instance$.getAnnotationSingleArgument(descriptor, KotlinBuiltIns.getInstance()
+                        .getInlineOptionsClassAnnotation());
+
+        if (argument instanceof ArrayValue) {
+            List<CompileTimeConstant<?>> values = ((ArrayValue) argument).getValue();
+
+            for (CompileTimeConstant<?> value : values) {
+                if (value instanceof EnumValue) {
+                    if (((EnumValue) value).getValue().getName().asString().equals(option.name())) {
+                        return true;
+                    }
                 }
             }
         }
-        return null;
+
+        return false;
     }
-
-
 }
 

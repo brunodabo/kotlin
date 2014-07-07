@@ -16,7 +16,6 @@
 
 package org.jetbrains.jet.jps.build;
 
-import com.google.common.collect.Lists;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.io.StreamUtil;
@@ -224,7 +223,7 @@ public class KotlinBuilder extends ModuleLevelBuilder {
         IncrementalCacheImpl cache = new IncrementalCacheImpl(KotlinBuilderModuleScriptGenerator.getIncrementalCacheDir(context));
 
         try {
-            List<Pair<String, File>> moduleIdsAndFiles = new ArrayList<Pair<String, File>>();
+            List<Pair<String, File>> moduleIdsAndSourceFiles = new ArrayList<Pair<String, File>>();
             Map<String, File> outDirectories = new HashMap<String, File>();
 
             for (ModuleBuildTarget target : chunk.getTargets()) {
@@ -232,12 +231,12 @@ public class KotlinBuilder extends ModuleLevelBuilder {
                 outDirectories.put(targetId, target.getOutputDir());
 
                 for (String file : dirtyFilesHolder.getRemovedFiles(target)) {
-                    moduleIdsAndFiles.add(new Pair<String, File>(targetId, new File(file)));
+                    moduleIdsAndSourceFiles.add(new Pair<String, File>(targetId, new File(file)));
                 }
             }
-            cache.clearCacheForRemovedFiles(moduleIdsAndFiles, outDirectories);
+            cache.clearCacheForRemovedFiles(moduleIdsAndSourceFiles, outDirectories);
 
-            boolean significantChanges = false;
+            IncrementalCacheImpl.RecompilationDecision recompilationDecision = IncrementalCacheImpl.RecompilationDecision.DO_NOTHING;
 
             for (SimpleOutputItem outputItem : outputItemCollector.getOutputs()) {
                 BuildTarget<?> target = null;
@@ -253,17 +252,20 @@ public class KotlinBuilder extends ModuleLevelBuilder {
                 File outputFile = outputItem.getOutputFile();
 
                 if (IncrementalCompilation.ENABLED) {
-                    if (cache.saveFileToCache(target.getId(), sourceFiles, outputFile)) {
-                        significantChanges = true;
-                    }
+                    IncrementalCacheImpl.RecompilationDecision newDecision = cache.saveFileToCache(target.getId(), sourceFiles, outputFile);
+                    recompilationDecision = recompilationDecision.merge(newDecision);
                 }
 
                 outputConsumer.registerOutputFile(target, outputFile, paths(sourceFiles));
             }
 
             if (IncrementalCompilation.ENABLED) {
-                // TODO should mark dependencies as dirty, as well
-                if (significantChanges) {
+                if (recompilationDecision == IncrementalCacheImpl.RecompilationDecision.RECOMPILE_ALL) {
+                    allCompiledFiles.clear();
+                    return ExitCode.CHUNK_REBUILD_REQUIRED;
+                }
+                if (recompilationDecision == IncrementalCacheImpl.RecompilationDecision.COMPILE_OTHERS) {
+                    // TODO should mark dependencies as dirty, as well
                     FSOperations.markDirty(context, chunk, new FileFilter() {
                         @Override
                         public boolean accept(@NotNull File file) {

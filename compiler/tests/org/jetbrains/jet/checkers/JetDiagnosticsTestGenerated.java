@@ -2596,6 +2596,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                     doTest("compiler/testData/diagnostics/tests/delegatedProperty/inference/extensionProperty.kt");
                 }
                 
+                @TestMetadata("labeledDelegatedExpression.kt")
+                public void testLabeledDelegatedExpression() throws Exception {
+                    doTest("compiler/testData/diagnostics/tests/delegatedProperty/inference/labeledDelegatedExpression.kt");
+                }
+                
                 @TestMetadata("noErrorsForImplicitConstraints.kt")
                 public void testNoErrorsForImplicitConstraints() throws Exception {
                     doTest("compiler/testData/diagnostics/tests/delegatedProperty/inference/noErrorsForImplicitConstraints.kt");
@@ -3791,6 +3796,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 doTest("compiler/testData/diagnostics/tests/incompleteCode/typeParameterOnLhsOfDot.kt");
             }
             
+            @TestMetadata("unresolvedArguments.kt")
+            public void testUnresolvedArguments() throws Exception {
+                doTest("compiler/testData/diagnostics/tests/incompleteCode/unresolvedArguments.kt");
+            }
+            
             @TestMetadata("variableDeclarationInSelector.kt")
             public void testVariableDeclarationInSelector() throws Exception {
                 doTest("compiler/testData/diagnostics/tests/incompleteCode/variableDeclarationInSelector.kt");
@@ -4766,6 +4776,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 @TestMetadata("mathOperation.kt")
                 public void testMathOperation() throws Exception {
                     doTest("compiler/testData/diagnostics/tests/inline/unaryExpressions/mathOperation.kt");
+                }
+                
+                @TestMetadata("notOnCall.kt")
+                public void testNotOnCall() throws Exception {
+                    doTest("compiler/testData/diagnostics/tests/inline/unaryExpressions/notOnCall.kt");
                 }
                 
                 @TestMetadata("notOperation.kt")
@@ -7040,6 +7055,11 @@ public class JetDiagnosticsTestGenerated extends AbstractJetDiagnosticsTest {
                 @TestMetadata("analyzeUnmappedArguments.kt")
                 public void testAnalyzeUnmappedArguments() throws Exception {
                     doTest("compiler/testData/diagnostics/tests/resolve/nestedCalls/analyzeUnmappedArguments.kt");
+                }
+                
+                @TestMetadata("argumentsInParentheses.kt")
+                public void testArgumentsInParentheses() throws Exception {
+                    doTest("compiler/testData/diagnostics/tests/resolve/nestedCalls/argumentsInParentheses.kt");
                 }
                 
                 @TestMetadata("completeTypeInferenceForNestedInNoneApplicable.kt")

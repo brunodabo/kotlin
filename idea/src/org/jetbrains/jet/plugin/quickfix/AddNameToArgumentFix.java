@@ -35,6 +35,7 @@ import org.jetbrains.jet.lang.descriptors.ValueParameterDescriptor;
 import org.jetbrains.jet.lang.diagnostics.Diagnostic;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingContext;
+import org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.types.JetType;
 import org.jetbrains.jet.lang.types.checker.JetTypeChecker;
@@ -62,11 +63,8 @@ public class AddNameToArgumentFix extends JetIntentionAction<JetValueArgument> {
         JetCallElement callElement = PsiTreeUtil.getParentOfType(argument, JetCallElement.class);
         assert callElement != null : "The argument has to be inside a function or constructor call";
 
-        JetExpression callee = callElement.getCalleeExpression();
-        if (!(callee instanceof JetReferenceExpression)) return Collections.emptyList();
-
         BindingContext context = ResolvePackage.getBindingContext(argument.getContainingJetFile());
-        ResolvedCall<?> resolvedCall = context.get(BindingContext.RESOLVED_CALL, (JetReferenceExpression) callee);
+        ResolvedCall<?> resolvedCall = BindingContextUtilPackage.getResolvedCall(callElement, context);
         if (resolvedCall == null) return Collections.emptyList();
 
         CallableDescriptor callableDescriptor = resolvedCall.getResultingDescriptor();

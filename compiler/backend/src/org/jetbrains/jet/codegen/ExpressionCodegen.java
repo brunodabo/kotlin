@@ -77,6 +77,7 @@ import static org.jetbrains.jet.codegen.JvmCodegenUtil.*;
 import static org.jetbrains.jet.codegen.binding.CodegenBinding.*;
 import static org.jetbrains.jet.lang.resolve.BindingContext.*;
 import static org.jetbrains.jet.lang.resolve.BindingContextUtils.*;
+import static org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage.*;
 import static org.jetbrains.jet.lang.resolve.java.AsmTypeConstants.*;
 import static org.jetbrains.jet.lang.resolve.java.JvmAnnotationNames.KotlinSyntheticClass;
 import static org.jetbrains.jet.lang.resolve.java.diagnostics.DiagnosticsPackage.OtherOrigin;
@@ -322,13 +323,6 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         return type == null ? Type.VOID_TYPE : asmType(type);
     }
 
-    @NotNull
-    public ResolvedCall<?> resolvedCall(JetExpression expression) {
-        ResolvedCall<?> resolvedCall = bindingContext.get(RESOLVED_CALL, expression);
-        assert resolvedCall != null : "Unresolved call: " + expression.getText();
-        return resolvedCall;
-    }
-
     @Override
     public StackValue visitParenthesizedExpression(@NotNull JetParenthesizedExpression expression, StackValue receiver) {
         return genQualified(receiver, expression.getExpression());
@@ -466,7 +460,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         // Is it a "1..2" or so
         RangeCodegenUtil.BinaryCall binaryCall = RangeCodegenUtil.getRangeAsBinaryCall(forExpression);
         if (binaryCall != null) {
-            ResolvedCall<?> resolvedCall = bindingContext.get(RESOLVED_CALL, binaryCall.op);
+            ResolvedCall<?> resolvedCall = getResolvedCall(binaryCall.op, bindingContext);
             if (resolvedCall != null) {
                 if (RangeCodegenUtil.isOptimizableRangeTo(resolvedCall.getResultingDescriptor())) {
                     generateForLoop(new ForInRangeLiteralLoopGenerator(forExpression, binaryCall));
@@ -620,7 +614,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
                 ResolvedCall<FunctionDescriptor> resolvedCall = bindingContext.get(COMPONENT_RESOLVED_CALL, variableDeclaration);
                 assert resolvedCall != null : "Resolved call is null for " + variableDeclaration.getText();
                 Call call = makeFakeCall(new TransientReceiver(elementType));
-                invokeFunction(call, StackValue.local(loopParameterVar, asmElementType), resolvedCall);
+                invokeFunction(call, resolvedCall, StackValue.local(loopParameterVar, asmElementType));
 
                 v.store(componentVarIndex, componentAsmType);
             }
@@ -707,8 +701,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
             iteratorVarIndex = createLoopTempVariable(asmTypeForIterator);
 
-            Call call = bindingContext.get(LOOP_RANGE_ITERATOR_CALL, forExpression.getLoopRange());
-            invokeFunction(call, StackValue.none(), iteratorCall);
+            invokeFunction(iteratorCall, StackValue.none());
             v.store(iteratorVarIndex, asmTypeForIterator);
         }
 
@@ -725,7 +718,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
                                                                       LOOP_RANGE_HAS_NEXT_RESOLVED_CALL, loopRange,
                                                                       "No hasNext() function " + DiagnosticUtils.atLocation(loopRange));
             @SuppressWarnings("ConstantConditions") Call fakeCall = makeFakeCall(new TransientReceiver(iteratorCall.getResultingDescriptor().getReturnType()));
-            invokeFunction(fakeCall, StackValue.local(iteratorVarIndex, asmTypeForIterator), hasNextCall);
+            invokeFunction(fakeCall, hasNextCall, StackValue.local(iteratorVarIndex, asmTypeForIterator));
 
             JetType type = hasNextCall.getResultingDescriptor().getReturnType();
             assert type != null && JetTypeChecker.DEFAULT.isSubtypeOf(type, KotlinBuiltIns.getInstance().getBooleanType());
@@ -739,7 +732,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         protected void assignToLoopParameter() {
             @SuppressWarnings("ConstantConditions") Call fakeCall =
                     makeFakeCall(new TransientReceiver(iteratorCall.getResultingDescriptor().getReturnType()));
-            invokeFunction(fakeCall, StackValue.local(iteratorVarIndex, asmTypeForIterator), nextCall);
+            invokeFunction(fakeCall, nextCall, StackValue.local(iteratorVarIndex, asmTypeForIterator));
             //noinspection ConstantConditions
             v.store(loopParameterVar, asmType(nextCall.getResultingDescriptor().getReturnType()));
         }
@@ -1348,7 +1341,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             assert superConstructor != null;
             CallableMethod superCallable = typeMapper.mapToCallableMethod(superConstructor);
             Type[] argumentTypes = superCallable.getAsmMethod().getArgumentTypes();
-            ResolvedCall<?> resolvedCall = resolvedCall(superCall.getCalleeExpression());
+            ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(superCall, bindingContext);
             pushMethodArgumentsWithoutCallReceiver(resolvedCall, Arrays.asList(argumentTypes), false, defaultCallGenerator);
         }
 
@@ -1657,7 +1650,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
     @Override
     public StackValue visitSimpleNameExpression(@NotNull JetSimpleNameExpression expression, StackValue receiver) {
-        ResolvedCall<?> resolvedCall = bindingContext.get(RESOLVED_CALL, expression);
+        ResolvedCall<?> resolvedCall = getResolvedCall(expression, bindingContext);
 
         DeclarationDescriptor descriptor;
         if (resolvedCall == null) {
@@ -1933,10 +1926,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
     @Override
     public StackValue visitCallExpression(@NotNull JetCallExpression expression, StackValue receiver) {
-        JetExpression callee = expression.getCalleeExpression();
-        assert callee != null;
-
-        ResolvedCall<?> resolvedCall = resolvedCall(callee);
+        ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
         CallableDescriptor funDescriptor = resolvedCall.getResultingDescriptor();
 
         if (!(funDescriptor instanceof FunctionDescriptor)) {
@@ -1949,7 +1939,6 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             return generateNewCall(expression, resolvedCall, receiver);
         }
 
-        Call call = bindingContext.get(CALL, expression.getCalleeExpression());
         if (funDescriptor.getOriginal() instanceof SamConstructorDescriptor) {
             //noinspection ConstantConditions
             SamType samType = SamType.create(funDescriptor.getReturnType());
@@ -1957,7 +1946,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             return invokeSamConstructor(expression, resolvedCall, samType);
         }
 
-        return invokeFunction(call, receiver, resolvedCall);
+        return invokeFunction(resolvedCall, receiver);
     }
 
     @NotNull
@@ -2032,9 +2021,14 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     }
 
     @NotNull
-    public StackValue invokeFunction(Call call, StackValue receiver, ResolvedCall<?> resolvedCall) {
+    public StackValue invokeFunction(@NotNull ResolvedCall<?> resolvedCall, @NotNull StackValue receiver) {
+        return invokeFunction(resolvedCall.getCall(), resolvedCall, receiver);
+    }
+
+    @NotNull
+    public StackValue invokeFunction(@NotNull Call call, @NotNull ResolvedCall<?> resolvedCall, @NotNull StackValue receiver) {
         if (resolvedCall instanceof VariableAsFunctionResolvedCall) {
-            return invokeFunction(call, receiver, ((VariableAsFunctionResolvedCall) resolvedCall).getFunctionCall());
+            return invokeFunction(call, ((VariableAsFunctionResolvedCall) resolvedCall).getFunctionCall(), receiver);
         }
 
         FunctionDescriptor fd = (FunctionDescriptor) resolvedCall.getResultingDescriptor();
@@ -2455,7 +2449,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
 
     @Override
     public StackValue visitCallableReferenceExpression(@NotNull JetCallableReferenceExpression expression, StackValue data) {
-        ResolvedCall<?> resolvedCall = resolvedCall(expression.getCallableReference());
+        ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression.getCallableReference(), bindingContext);
         FunctionDescriptor functionDescriptor = bindingContext.get(FUNCTION, expression);
         if (functionDescriptor != null) {
             CallableReferenceGenerationStrategy strategy = new CallableReferenceGenerationStrategy(state, functionDescriptor, resolvedCall);
@@ -2610,7 +2604,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             }
             else {
                 Call call = CallMaker.makeCall(fakeExpression, NO_RECEIVER, null, fakeExpression, fakeArguments);
-                result = codegen.invokeFunction(call, StackValue.none(), fakeResolvedCall);
+                result = codegen.invokeFunction(call, fakeResolvedCall, StackValue.none());
             }
 
             InstructionAdapter v = codegen.v;
@@ -2732,7 +2726,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             return generateIn(StackValue.expression(Type.INT_TYPE, expression.getLeft(), this), expression.getRight(), reference);
         }
         else {
-            ResolvedCall<?> resolvedCall = resolvedCall(reference);
+            ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
             FunctionDescriptor descriptor = (FunctionDescriptor) resolvedCall.getResultingDescriptor();
 
             Callable callable = resolveToCallable(descriptor, false);
@@ -2743,8 +2737,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
                 return StackValue.onStack(returnType);
             }
 
-            Call call = bindingContext.get(CALL, reference);
-            return invokeFunction(call, receiver, resolvedCall);
+            return invokeFunction(resolvedCall, receiver);
         }
     }
 
@@ -2754,11 +2747,8 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             genInIntRange(leftValue, (JetBinaryExpression) deparenthesized);
         }
         else {
-            invokeFunction(
-                    bindingContext.get(CALL, operationReference),
-                    StackValue.none(),
-                    resolvedCall(operationReference)
-            );
+            ResolvedCall<? extends CallableDescriptor> resolvedCall = getResolvedCallWithAssert(operationReference, bindingContext);
+            invokeFunction(resolvedCall, StackValue.none());
         }
         if (operationReference.getReferencedNameElementType() == JetTokens.NOT_IN) {
             genInvertBoolean(v);
@@ -2924,7 +2914,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     }
 
     private StackValue generateComparison(JetBinaryExpression expression, StackValue receiver) {
-        ResolvedCall<?> resolvedCall = resolvedCall(expression.getOperationReference());
+        ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
         FunctionDescriptor descriptor = (FunctionDescriptor) resolvedCall.getResultingDescriptor();
 
         JetExpression left = expression.getLeft();
@@ -2940,8 +2930,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             gen(right, type);
         }
         else {
-            Call call = bindingContext.get(CALL, expression.getOperationReference());
-            StackValue result = invokeFunction(call, receiver, resolvedCall);
+            StackValue result = invokeFunction(resolvedCall, receiver);
             type = Type.INT_TYPE;
             result.put(type, v);
             v.iconst(0);
@@ -2959,7 +2948,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
     }
 
     private StackValue generateAugmentedAssignment(JetBinaryExpression expression) {
-        ResolvedCall<?> resolvedCall = resolvedCall(expression.getOperationReference());
+        ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
         FunctionDescriptor descriptor = (FunctionDescriptor) resolvedCall.getResultingDescriptor();
         Callable callable = resolveToCallable(descriptor, false);
         JetExpression lhs = expression.getLeft();
@@ -2996,8 +2985,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             @NotNull Type lhsType,
             boolean keepReturnValue
     ) {
-        Call call = bindingContext.get(CALL, expression.getOperationReference());
-        assert call != null : "Call should be not null for operation reference in " + expression.getText();
+        Call call = getCallWithAssert(expression, bindingContext);
 
         StackValue value = gen(expression.getLeft());
         if (keepReturnValue) {
@@ -3062,11 +3050,10 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
         }
 
         DeclarationDescriptor cls = op.getContainingDeclaration();
-        ResolvedCall<?> resolvedCall = resolvedCall(expression.getOperationReference());
+        ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
 
         if (isPrimitiveNumberClassDescriptor(cls) || !(op.getName().asString().equals("inc") || op.getName().asString().equals("dec"))) {
-            Call call = bindingContext.get(CALL, expression.getOperationReference());
-            return invokeFunction(call, receiver, resolvedCall);
+            return invokeFunction(resolvedCall, receiver);
         }
 
         CallableMethod callableMethod = (CallableMethod) callable;
@@ -3144,7 +3131,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
             storeType = type;
         }
         else {
-            ResolvedCall<?> resolvedCall = resolvedCall(expression.getOperationReference());
+            ResolvedCall<?> resolvedCall = getResolvedCallWithAssert(expression, bindingContext);
             Callable callable = resolveToCallable((FunctionDescriptor) op, false);
             CallableMethod callableMethod = (CallableMethod) callable;
             callableMethod.invokeWithNotNullAssertion(v, state, resolvedCall);
@@ -3226,7 +3213,7 @@ public class ExpressionCodegen extends JetVisitor<StackValue, StackValue> implem
                     ResolvedCall<FunctionDescriptor> resolvedCall = bindingContext.get(COMPONENT_RESOLVED_CALL, variableDeclaration);
                     assert resolvedCall != null : "Resolved call is null for " + variableDeclaration.getText();
                     Call call = makeFakeCall(initializerAsReceiver);
-                    invokeFunction(call, local, resolvedCall);
+                    invokeFunction(call, resolvedCall, local);
                     return null;
                 }
             });

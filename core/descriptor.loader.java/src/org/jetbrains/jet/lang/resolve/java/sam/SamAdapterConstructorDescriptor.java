@@ -24,7 +24,8 @@ import org.jetbrains.jet.lang.resolve.java.descriptor.SamAdapterDescriptor;
     private final JavaConstructorDescriptor declaration;
 
     public SamAdapterConstructorDescriptor(@NotNull JavaConstructorDescriptor declaration) {
-        super(declaration.getContainingDeclaration(), null, declaration.getAnnotations(), declaration.isPrimary(), Kind.SYNTHESIZED);
+        super(declaration.getContainingDeclaration(), null, declaration.getAnnotations(),
+              declaration.isPrimary(), Kind.SYNTHESIZED, declaration.getSource());
         this.declaration = declaration;
         setHasStableParameterNames(declaration.hasStableParameterNames());
         setHasSynthesizedParameterNames(declaration.hasSynthesizedParameterNames());
@@ -32,7 +33,7 @@ import org.jetbrains.jet.lang.resolve.java.descriptor.SamAdapterDescriptor;
 
     @NotNull
     @Override
-    public JavaConstructorDescriptor getBaseForSynthesized() {
+    public JavaConstructorDescriptor getOriginForSam() {
         return declaration;
     }
 }

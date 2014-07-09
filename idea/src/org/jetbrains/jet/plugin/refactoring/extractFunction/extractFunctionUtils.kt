@@ -65,6 +65,7 @@ import org.jetbrains.jet.lang.cfg.pseudocodeTraverser.TraversalOrder
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.getTargetFunctionDescriptor
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.jet.lang.resolve.OverridingUtil
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils
 
 private val DEFAULT_FUNCTION_NAME = "myFun"
 private val DEFAULT_RETURN_TYPE = KotlinBuiltIns.getInstance().getUnitType()
@@ -284,7 +285,6 @@ fun TypeParameter.collectReferencedTypes(bindingContext: BindingContext): List<J
 }
 
 private fun JetType.processTypeIfExtractable(
-        bindingContext: BindingContext,
         typeParameters: MutableSet<TypeParameter>,
         nonDenotableTypes: MutableSet<JetType>,
         processTypeArguments: Boolean = true
@@ -292,7 +292,7 @@ private fun JetType.processTypeIfExtractable(
     return collectReferencedTypes(processTypeArguments).fold(true) { (extractable, typeToCheck) ->
         val parameterTypeDescriptor = typeToCheck.getConstructor().getDeclarationDescriptor() as? TypeParameterDescriptor
         val typeParameter = parameterTypeDescriptor?.let {
-            BindingContextUtils.descriptorToDeclaration(bindingContext, it)
+            DescriptorToSourceUtils.descriptorToDeclaration(it)
         } as? JetTypeParameter
 
         when {
@@ -411,9 +411,7 @@ private fun ExtractionData.inferParametersInfo(
         }
 
         if (referencedClassDescriptor != null) {
-            if (!referencedClassDescriptor.getDefaultType().processTypeIfExtractable(
-                    bindingContext, typeParameters, nonDenotableTypes, false
-            )) continue
+            if (!referencedClassDescriptor.getDefaultType().processTypeIfExtractable(typeParameters, nonDenotableTypes, false)) continue
 
             val replacingDescriptor = (originalDescriptor as? ConstructorDescriptor)?.getContainingDeclaration() ?: originalDescriptor
             replacementMap[refInfo.offsetInBody] = FqNameReplacement(DescriptorUtils.getFqNameSafe(replacingDescriptor))
@@ -436,7 +434,7 @@ private fun ExtractionData.inferParametersInfo(
                             ?: DEFAULT_PARAMETER_TYPE
                 }
 
-                if (!parameterType.processTypeIfExtractable(bindingContext, typeParameters, nonDenotableTypes)) continue
+                if (!parameterType.processTypeIfExtractable(typeParameters, nonDenotableTypes)) continue
 
                 val parameterTypePredicate =
                         pseudocode.getElementValue(originalRef)?.let { getExpectedTypePredicate(it, valueUsageMap, bindingContext) } ?: AllTypes
@@ -470,7 +468,7 @@ private fun ExtractionData.inferParametersInfo(
     }
 
     for (typeToCheck in typeParameters.flatMapTo(HashSet<JetType>()) { it.collectReferencedTypes(bindingContext) }) {
-        typeToCheck.processTypeIfExtractable(bindingContext, typeParameters, nonDenotableTypes)
+        typeToCheck.processTypeIfExtractable(typeParameters, nonDenotableTypes)
     }
 
     parameters.addAll(extractedDescriptorToParameter.values())
@@ -489,7 +487,7 @@ private fun ExtractionData.checkLocalDeclarationsWithNonLocalUsages(
     pseudocode.traverse(TraversalOrder.FORWARD) { instruction ->
         if (instruction !in localInstructions) {
             PseudocodeUtil.extractVariableDescriptorIfAny(instruction, true, bindingContext)?.let { descriptor ->
-                val declaration = DescriptorToDeclarationUtil.getDeclaration(project, descriptor, bindingContext)
+                val declaration = DescriptorToDeclarationUtil.getDeclaration(project, descriptor)
                 if (declaration is JetNamedDeclaration && declaration.isInsideOf(originalElements)) {
                     declarations.add(declaration)
                 }
@@ -572,7 +570,7 @@ fun ExtractionData.performAnalysis(): AnalysisResult {
     val (controlFlow, controlFlowMessage) = localInstructions.analyzeControlFlow(pseudocode, bindingContext, options, parameters)
     controlFlowMessage?.let { messages.add(it) }
 
-    controlFlow.returnType.processTypeIfExtractable(bindingContext, typeParameters, nonDenotableTypes)
+    controlFlow.returnType.processTypeIfExtractable(typeParameters, nonDenotableTypes)
 
     if (nonDenotableTypes.isNotEmpty()) {
         val typeStr = nonDenotableTypes.map {DescriptorRenderer.HTML.renderType(it)}.sort()
@@ -633,9 +631,8 @@ fun ExtractionDescriptor.validate(): ExtractionDescriptorWithConflicts {
         val diagnostics = bindingContext.getDiagnostics().forElement(currentRefExpr)
 
         val currentDescriptor = bindingContext[BindingContext.REFERENCE_TARGET, currentRefExpr]
-        val currentTarget = currentDescriptor?.let {
-            DescriptorToDeclarationUtil.getDeclaration(extractionData.project, it, bindingContext)
-        } as? PsiNamedElement
+        val currentTarget =
+                currentDescriptor?.let { DescriptorToDeclarationUtil.getDeclaration(extractionData.project, it) } as? PsiNamedElement
         if (currentTarget is JetParameter && currentTarget.getParent() == function.getValueParameterList()) continue
         if (currentDescriptor is LocalVariableDescriptor
         && parameters.any { it.mirrorVarName == currentDescriptor.getName().asString() }) continue

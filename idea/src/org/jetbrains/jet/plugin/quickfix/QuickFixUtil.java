@@ -32,7 +32,7 @@ import org.jetbrains.jet.lang.descriptors.ValueParameterDescriptor;
 import org.jetbrains.jet.lang.diagnostics.Diagnostic;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingContext;
-import org.jetbrains.jet.lang.resolve.BindingContextUtils;
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils;
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.BindingContextUtilPackage;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.types.DeferredType;
@@ -110,7 +110,7 @@ public class QuickFixUtil {
         BindingContext context = ResolvePackage.getBindingContext(callExpression.getContainingJetFile());
         ResolvedCall<?> resolvedCall = BindingContextUtilPackage.getResolvedCall(callExpression, context);
         if (resolvedCall == null) return null;
-        PsiElement declaration = safeGetDeclaration(context, resolvedCall);
+        PsiElement declaration = safeGetDeclaration(resolvedCall);
         if (declaration instanceof JetFunction) {
             return ((JetFunction) declaration).getValueParameterList();
         }
@@ -121,8 +121,8 @@ public class QuickFixUtil {
     }
 
     @Nullable
-    public static PsiElement safeGetDeclaration(@NotNull BindingContext context, @NotNull ResolvedCall<?> resolvedCall) {
-        List<PsiElement> declarations = BindingContextUtils.descriptorToDeclarations(context, resolvedCall.getResultingDescriptor());
+    public static PsiElement safeGetDeclaration(@NotNull ResolvedCall<?> resolvedCall) {
+        List<PsiElement> declarations = DescriptorToSourceUtils.descriptorToDeclarations(resolvedCall.getResultingDescriptor());
         //do not create fix if descriptor has more than one overridden declaration
         if (declarations.size() == 1) {
             return declarations.iterator().next();

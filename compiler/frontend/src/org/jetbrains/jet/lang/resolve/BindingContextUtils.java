@@ -18,7 +18,6 @@ package org.jetbrains.jet.lang.resolve;
 
 import com.google.common.collect.Lists;
 import com.intellij.openapi.util.Pair;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -34,40 +33,16 @@ import org.jetbrains.jet.lang.types.JetType;
 import org.jetbrains.jet.lang.types.JetTypeInfo;
 import org.jetbrains.jet.lang.types.TypeUtils;
 import org.jetbrains.jet.util.slicedmap.ReadOnlySlice;
-import org.jetbrains.jet.util.slicedmap.Slices;
 
-import java.util.*;
+import java.util.Collection;
 
 import static org.jetbrains.jet.lang.descriptors.CallableMemberDescriptor.Kind.DECLARATION;
-import static org.jetbrains.jet.lang.descriptors.CallableMemberDescriptor.Kind.SYNTHESIZED;
 import static org.jetbrains.jet.lang.diagnostics.Errors.AMBIGUOUS_LABEL;
 import static org.jetbrains.jet.lang.resolve.BindingContext.*;
 
 public class BindingContextUtils {
     private BindingContextUtils() {
     }
-
-    private static final Slices.KeyNormalizer<DeclarationDescriptor> DECLARATION_DESCRIPTOR_NORMALIZER = new Slices.KeyNormalizer<DeclarationDescriptor>() {
-        @Override
-        public DeclarationDescriptor normalize(DeclarationDescriptor declarationDescriptor) {
-            if (declarationDescriptor instanceof CallableMemberDescriptor) {
-                CallableMemberDescriptor callable = (CallableMemberDescriptor) declarationDescriptor;
-                if (callable.getKind() != DECLARATION) {
-                    throw new IllegalStateException("non-declaration descriptors should be filtered out earlier: " + callable);
-                }
-            }
-            //if (declarationDescriptor instanceof VariableAsFunctionDescriptor) {
-            //    VariableAsFunctionDescriptor descriptor = (VariableAsFunctionDescriptor) declarationDescriptor;
-            //    if (descriptor.getOriginal() != descriptor) {
-            //        throw new IllegalStateException("original should be resolved earlier: " + descriptor);
-            //    }
-            //}
-            return declarationDescriptor.getOriginal();
-        }
-    };
-
-    /*package*/ static final ReadOnlySlice<DeclarationDescriptor, PsiElement> DESCRIPTOR_TO_DECLARATION =
-            Slices.<DeclarationDescriptor, PsiElement>sliceBuilder().setKeyNormalizer(DECLARATION_DESCRIPTOR_NORMALIZER).setDebugName("DESCRIPTOR_TO_DECLARATION").build();
 
     @Nullable
     public static VariableDescriptor extractVariableDescriptorIfAny(@NotNull BindingContext bindingContext, @Nullable JetElement element, boolean onlyReference) {
@@ -94,7 +69,7 @@ public class BindingContextUtils {
         DeclarationDescriptor descriptor = findTopLevelParent(declarationDescriptor);
         if (descriptor == null) return null;
 
-        PsiElement declaration = descriptorToDeclaration(context, descriptor);
+        PsiElement declaration = DescriptorToSourceUtils.descriptorToDeclaration(descriptor);
         if (declaration == null) return null;
 
         PsiFile containingFile = declaration.getContainingFile();
@@ -112,97 +87,6 @@ public class BindingContextUtils {
             descriptor = descriptor.getContainingDeclaration();
         }
         return descriptor;
-    }
-
-    @Nullable
-    private static PsiElement doGetDescriptorToDeclaration(@NotNull BindingContext context, @NotNull DeclarationDescriptor descriptor) {
-        return context.get(DESCRIPTOR_TO_DECLARATION, descriptor);
-    }
-
-    // NOTE this is also used by KDoc
-    @Nullable
-    public static PsiElement descriptorToDeclaration(@NotNull BindingContext context, @NotNull DeclarationDescriptor descriptor) {
-        if (descriptor instanceof CallableMemberDescriptor) {
-            return callableDescriptorToDeclaration(context, (CallableMemberDescriptor) descriptor);
-        }
-        else if (descriptor instanceof ClassDescriptor) {
-            return classDescriptorToDeclaration(context, (ClassDescriptor) descriptor);
-        }
-        else {
-            return doGetDescriptorToDeclaration(context, descriptor);
-        }
-    }
-
-    @NotNull
-    public static List<PsiElement> descriptorToDeclarations(@NotNull BindingContext context, @NotNull DeclarationDescriptor descriptor) {
-        if (descriptor instanceof CallableMemberDescriptor) {
-            return callableDescriptorToDeclarations(context, (CallableMemberDescriptor) descriptor);
-        }
-        else {
-            PsiElement psiElement = descriptorToDeclaration(context, descriptor);
-            if (psiElement != null) {
-                return Lists.newArrayList(psiElement);
-            } else {
-                return Lists.newArrayList();
-            }
-        }
-    }
-
-    @Nullable
-    public static PsiElement callableDescriptorToDeclaration(@NotNull BindingContext context, @NotNull CallableMemberDescriptor callable) {
-        if (callable.getKind() == SYNTHESIZED) {
-            CallableMemberDescriptor original = callable.getOriginal();
-            if (original instanceof SynthesizedCallableMemberDescriptor<?>) {
-                DeclarationDescriptor base = ((SynthesizedCallableMemberDescriptor<?>) original).getBaseForSynthesized();
-                return descriptorToDeclaration(context, base);
-            }
-            return null;
-        }
-
-        if (callable.getKind() == DECLARATION) {
-            return doGetDescriptorToDeclaration(context, callable.getOriginal());
-        }
-
-        Set<? extends CallableMemberDescriptor> overriddenDescriptors = callable.getOverriddenDescriptors();
-        if (overriddenDescriptors.size() != 1) {
-            throw new IllegalStateException(
-                    "Cannot find declaration: fake descriptor " + callable + " has more than one overridden descriptor:\n" +
-                    StringUtil.join(overriddenDescriptors, ",\n"));
-        }
-
-        return callableDescriptorToDeclaration(context, overriddenDescriptors.iterator().next());
-    }
-
-    @NotNull
-    public static List<PsiElement> callableDescriptorToDeclarations(
-            @NotNull BindingContext context,
-            @NotNull CallableMemberDescriptor callable
-    ) {
-        if (callable.getKind() == SYNTHESIZED) {
-            CallableMemberDescriptor original = callable.getOriginal();
-            if (original instanceof SynthesizedCallableMemberDescriptor<?>) {
-                DeclarationDescriptor base = ((SynthesizedCallableMemberDescriptor<?>) original).getBaseForSynthesized();
-                return descriptorToDeclarations(context, base);
-            }
-            return Collections.emptyList();
-        }
-
-        if (callable.getKind() == DECLARATION) {
-            PsiElement psiElement = doGetDescriptorToDeclaration(context, callable);
-            return psiElement != null ? Lists.newArrayList(psiElement) : Lists.<PsiElement>newArrayList();
-        }
-
-        List<PsiElement> r = new ArrayList<PsiElement>();
-        Set<? extends CallableMemberDescriptor> overriddenDescriptors = callable.getOverriddenDescriptors();
-        for (CallableMemberDescriptor overridden : overriddenDescriptors) {
-            r.addAll(callableDescriptorToDeclarations(context, overridden));
-        }
-        return r;
-    }
-
-    @Nullable
-    public static PsiElement classDescriptorToDeclaration(@NotNull BindingContext context, @NotNull ClassDescriptor clazz) {
-        return doGetDescriptorToDeclaration(context, clazz);
     }
 
     public static void recordFunctionDeclarationToDescriptor(@NotNull BindingTrace trace,
@@ -261,7 +145,7 @@ public class BindingContextUtils {
     ) {
         Collection<PsiElement> targets = Lists.newArrayList();
         for (DeclarationDescriptor descriptor : declarationsByLabel) {
-            PsiElement element = descriptorToDeclaration(trace.getBindingContext(), descriptor);
+            PsiElement element = DescriptorToSourceUtils.descriptorToDeclaration(descriptor);
             assert element != null : "Label can only point to something in the same lexical scope";
             targets.add(element);
         }
@@ -316,16 +200,16 @@ public class BindingContextUtils {
 
     @NotNull
     public static Pair<FunctionDescriptor, PsiElement> getContainingFunctionSkipFunctionLiterals(
-            @NotNull BindingContext context,
             @Nullable DeclarationDescriptor startDescriptor,
             boolean strict
     ) {
         FunctionDescriptor containingFunctionDescriptor = DescriptorUtils.getParentOfType(startDescriptor, FunctionDescriptor.class, strict);
-        PsiElement containingFunction = containingFunctionDescriptor != null ? callableDescriptorToDeclaration(context, containingFunctionDescriptor) : null;
+        PsiElement containingFunction =
+                containingFunctionDescriptor != null ? DescriptorToSourceUtils.callableDescriptorToDeclaration(containingFunctionDescriptor) : null;
         while (containingFunction instanceof JetFunctionLiteral) {
             containingFunctionDescriptor = DescriptorUtils.getParentOfType(containingFunctionDescriptor, FunctionDescriptor.class);
-            containingFunction = containingFunctionDescriptor != null ? callableDescriptorToDeclaration(context,
-                                                                                                        containingFunctionDescriptor) : null;
+            containingFunction = containingFunctionDescriptor != null ? DescriptorToSourceUtils
+                    .callableDescriptorToDeclaration(containingFunctionDescriptor) : null;
         }
 
         return new Pair<FunctionDescriptor, PsiElement>(containingFunctionDescriptor, containingFunction);

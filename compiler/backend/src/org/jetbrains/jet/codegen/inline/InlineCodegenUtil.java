@@ -33,7 +33,7 @@ import org.jetbrains.jet.descriptors.serialization.ProtoBuf;
 import org.jetbrains.jet.descriptors.serialization.descriptors.DeserializedSimpleFunctionDescriptor;
 import org.jetbrains.jet.lang.descriptors.*;
 import org.jetbrains.jet.lang.psi.JetFile;
-import org.jetbrains.jet.lang.resolve.BindingContextUtils;
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
 import org.jetbrains.jet.lang.resolve.java.PackageClassUtils;
@@ -155,7 +155,7 @@ public class InlineCodegenUtil {
 
     private static String getInlineName(@NotNull CodegenContext codegenContext, @NotNull DeclarationDescriptor currentDescriptor, @NotNull JetTypeMapper typeMapper) {
         if (currentDescriptor instanceof PackageFragmentDescriptor) {
-            PsiFile file = getContainingFile(codegenContext, typeMapper);
+            PsiFile file = getContainingFile(codegenContext);
 
             Type packagePartType;
             if (file == null) {
@@ -245,9 +245,9 @@ public class InlineCodegenUtil {
     }
 
     @Nullable
-    public static PsiFile getContainingFile(CodegenContext codegenContext, JetTypeMapper typeMapper) {
+    public static PsiFile getContainingFile(CodegenContext codegenContext) {
         DeclarationDescriptor contextDescriptor = codegenContext.getContextDescriptor();
-        PsiElement psiElement = BindingContextUtils.descriptorToDeclaration(typeMapper.getBindingContext(), contextDescriptor);
+        PsiElement psiElement = DescriptorToSourceUtils.descriptorToDeclaration(contextDescriptor);
         if (psiElement != null) {
             return psiElement.getContainingFile();
         }

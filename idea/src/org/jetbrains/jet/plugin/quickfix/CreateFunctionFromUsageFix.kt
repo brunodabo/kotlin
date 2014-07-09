@@ -73,6 +73,7 @@ import org.jetbrains.jet.plugin.caches.resolve.getAnalysisResults
 import org.jetbrains.jet.plugin.caches.resolve.getBindingContext
 import org.jetbrains.jet.lang.diagnostics.DiagnosticFactory
 import org.jetbrains.jet.lang.diagnostics
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils
 
 private val TYPE_PARAMETER_LIST_VARIABLE_NAME = "typeParameterList"
 private val TEMPLATE_FROM_USAGE_FUNCTION_BODY = "New Kotlin Function Body.kt"
@@ -110,11 +111,9 @@ private class TypeCandidate(public val theType: JetType, scope: JetScope? = null
 /**
  * Represents an element in the class selection list.
  */
-private class ClassCandidate(public val typeCandidate: TypeCandidate, file: JetFile, context: BindingContext) {
+private class ClassCandidate(public val typeCandidate: TypeCandidate, file: JetFile) {
     public val jetClass: JetClass = DescriptorToDeclarationUtil.getDeclaration(
-            file,
-            DescriptorUtils.getClassDescriptorForType(typeCandidate.theType),
-            context
+            file, DescriptorUtils.getClassDescriptorForType(typeCandidate.theType)
     ) as JetClass
 }
 
@@ -550,7 +549,7 @@ public class CreateFunctionFromUsageFix internal (
         }
         else {
             // class selection
-            val list = JBList(ownerTypeCandidates.map { ClassCandidate(it, currentFile, currentFileContext) })
+            val list = JBList(ownerTypeCandidates.map { ClassCandidate(it, currentFile) })
             val renderer = QuickFixUtil.ClassCandidateListCellRenderer()
             list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
             list.setCellRenderer(renderer)
@@ -574,7 +573,7 @@ public class CreateFunctionFromUsageFix internal (
         // gather relevant information
         ownerClassDescriptor = DescriptorUtils.getClassDescriptorForType(selectedReceiverType.theType)
         val receiverType = ownerClassDescriptor.getDefaultType()
-        val classDeclaration = BindingContextUtils.classDescriptorToDeclaration(currentFileContext, ownerClassDescriptor)
+        val classDeclaration = DescriptorToSourceUtils.classDescriptorToDeclaration(ownerClassDescriptor)
         if (classDeclaration is JetClass) {
             ownerClass = classDeclaration
             isExtension = !ownerClass.isWritable()

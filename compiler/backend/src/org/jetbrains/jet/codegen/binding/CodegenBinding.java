@@ -142,7 +142,7 @@ public class CodegenBinding {
     ) {
         ClassDescriptorImpl classDescriptor =
                 new ClassDescriptorImpl(scriptDescriptor, Name.special("<script-" + asmType.getInternalName() + ">"), Modality.FINAL,
-                                        Collections.singleton(KotlinBuiltIns.getInstance().getAnyType()));
+                                        Collections.singleton(KotlinBuiltIns.getInstance().getAnyType()), SourceElement.NO_SOURCE);
         classDescriptor.initialize(JetScope.EMPTY, Collections.<ConstructorDescriptor>emptySet(), null);
 
         recordClosure(bindingTrace, null, classDescriptor, null, asmType);
@@ -186,7 +186,7 @@ public class CodegenBinding {
 
         MutableClosure closure = new MutableClosure(superCall, enclosing, enclosingReceiver);
 
-        assert PsiCodegenPredictor.checkPredictedNameFromPsi(bindingTrace.getBindingContext(), classDescriptor, asmType);
+        assert PsiCodegenPredictor.checkPredictedNameFromPsi(classDescriptor, asmType);
         bindingTrace.record(ASM_TYPE, classDescriptor, asmType);
         bindingTrace.record(CLOSURE, classDescriptor, closure);
 
@@ -290,7 +290,7 @@ public class CodegenBinding {
         }
 
         Type asmType = Type.getObjectType(getAsmTypeImpl(bindingContext, klass));
-        assert PsiCodegenPredictor.checkPredictedNameFromPsi(bindingContext, klass, asmType);
+        assert PsiCodegenPredictor.checkPredictedNameFromPsi(klass, asmType);
         return asmType;
     }
 

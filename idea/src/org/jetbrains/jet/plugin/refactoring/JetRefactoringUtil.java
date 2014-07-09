@@ -44,7 +44,7 @@ import org.jetbrains.jet.lang.descriptors.impl.LocalVariableDescriptor;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.psi.psiUtil.PsiUtilPackage;
 import org.jetbrains.jet.lang.resolve.BindingContext;
-import org.jetbrains.jet.lang.resolve.BindingContextUtils;
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils;
 import org.jetbrains.jet.lang.resolve.OverrideResolver;
 import org.jetbrains.jet.lang.resolve.java.jetAsJava.KotlinLightMethod;
 import org.jetbrains.jet.lang.types.JetType;
@@ -141,7 +141,7 @@ public class JetRefactoringUtil {
                     @Override
                     public Pair<PsiElement, CallableDescriptor> fun(CallableDescriptor descriptor) {
                         return new Pair<PsiElement, CallableDescriptor>(
-                                DescriptorToDeclarationUtil.getDeclaration(project, descriptor, bindingContext),
+                                DescriptorToDeclarationUtil.getDeclaration(project, descriptor),
                                 descriptor
                         );
                     }
@@ -220,12 +220,8 @@ public class JetRefactoringUtil {
     }
 
     @NotNull
-    public static String formatClass(
-            @NotNull DeclarationDescriptor classDescriptor,
-            @NotNull BindingContext bindingContext,
-            boolean inCode
-    ) {
-        PsiElement element = BindingContextUtils.descriptorToDeclaration(bindingContext, classDescriptor);
+    public static String formatClass(@NotNull DeclarationDescriptor classDescriptor, boolean inCode) {
+        PsiElement element = DescriptorToSourceUtils.descriptorToDeclaration(classDescriptor);
         if (element instanceof PsiClass) {
             return formatPsiClass((PsiClass) element, false, inCode);
         }
@@ -234,12 +230,8 @@ public class JetRefactoringUtil {
     }
 
     @NotNull
-    public static String formatFunction(
-            @NotNull DeclarationDescriptor functionDescriptor,
-            @NotNull BindingContext bindingContext,
-            boolean inCode
-    ) {
-        PsiElement element = BindingContextUtils.descriptorToDeclaration(bindingContext, functionDescriptor);
+    public static String formatFunction(@NotNull DeclarationDescriptor functionDescriptor, boolean inCode) {
+        PsiElement element = DescriptorToSourceUtils.descriptorToDeclaration(functionDescriptor);
         if (element instanceof PsiMethod) {
             return formatPsiMethod((PsiMethod) element, false, inCode);
         }

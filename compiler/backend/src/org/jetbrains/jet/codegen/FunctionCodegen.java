@@ -196,7 +196,7 @@ public class FunctionCodegen extends ParentCodegenAware {
     }
 
     @SuppressWarnings("deprecation")
-    private void generateJetValueParameterAnnotations(
+    private static void generateJetValueParameterAnnotations(
             @NotNull MethodVisitor mv,
             @NotNull FunctionDescriptor functionDescriptor,
             @NotNull JvmMethodSignature jvmSignature
@@ -206,10 +206,7 @@ public class FunctionCodegen extends ParentCodegenAware {
 
         for (int i = 0; i < kotlinParameterTypes.size(); i++) {
             JvmMethodParameterKind kind = kotlinParameterTypes.get(i).getKind();
-            if (kind.isSkippedInGenericSignature()) {
-                markEnumOrInnerConstructorParameterAsSynthetic(mv, i);
-                continue;
-            }
+            if (kind.isSkippedInGenericSignature()) continue;
 
             String name;
             boolean nullableType;
@@ -496,7 +493,7 @@ public class FunctionCodegen extends ParentCodegenAware {
                     }
                 }
         );
-        return strings.toArray(new String[strings.size()]);
+        return ArrayUtil.toStringArray(strings);
     }
 
     static void generateConstructorWithoutParametersIfNeeded(
@@ -661,7 +658,8 @@ public class FunctionCodegen extends ParentCodegenAware {
         CallableMethod method;
         if (functionDescriptor instanceof ConstructorDescriptor) {
             method = state.getTypeMapper().mapToCallableMethod((ConstructorDescriptor) functionDescriptor);
-        } else {
+        }
+        else {
             method = state.getTypeMapper().mapToCallableMethod(functionDescriptor, false, methodContext);
         }
 

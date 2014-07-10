@@ -38,6 +38,10 @@ import org.jetbrains.jet.lang.psi.JetExpression
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.jet.lang.resolve.calls.model.VariableAsFunctionResolvedCall
 import org.jetbrains.jet.lang.resolve.bindingContextUtil.getParentResolvedCall
+import org.jetbrains.jet.lang.descriptors.ReceiverParameterDescriptor
+import org.jetbrains.jet.lang.resolve.scopes.receivers.ExtensionReceiver
+import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor
+import org.jetbrains.jet.lang.resolve.scopes.receivers.ClassReceiver
 
 public abstract class AbstractResolvedCallsTest() : JetLiteFixture() {
     override fun createEnvironment(): JetCoreEnvironment = createEnvironmentWithMockJdk(ConfigurationKind.JDK_ONLY)
@@ -78,25 +82,44 @@ private fun ArgumentMapping.getText() = when (this) {
     else -> "ARGUMENT UNMAPPED: "
 }
 
+private fun ReceiverValue.renderToText(): String = when (this) {
+    is ClassReceiver -> "Class{${getType()}}";
+    is ExtensionReceiver -> "${getType()}Ext{${getDeclarationDescriptor().renderToText()}}"
+    else -> "$this"
+}
+
+private fun DeclarationDescriptor.renderToText(): String = when (this) {
+    is ReceiverParameterDescriptor -> "${getValue().renderToText()}::this"
+    else -> DescriptorRenderer.COMPACT_WITH_SHORT_TYPES.render(this)
+}
+
 private fun ResolvedCall<*>.renderToText(): String {
-    val result = StringBuilder()
-    fun addLine(line: String) = result.append(line).append("\n")
+    return StringBuilder {
+        appendln("Resolved call:")
+        appendln()
 
-    addLine("Resolved call:\n")
-    addLine("Explicit receiver kind = ${getExplicitReceiverKind()}")
-    addLine("This object = ${getThisObject().getText()}")
-    addLine("Receiver argument = ${getReceiverArgument().getText()}")
+        if (getCandidateDescriptor() != getResultingDescriptor()) {
+            appendln("Candidate descriptor: ${getCandidateDescriptor()!!.renderToText()}")
+        }
+        appendln("Resulting descriptor: ${getResultingDescriptor()!!.renderToText()}")
+        appendln()
 
-    val valueArguments = getCall().getAllValueArguments()
-    if (valueArguments.isEmpty()) return result.toString()
+        appendln("Explicit receiver kind = ${getExplicitReceiverKind()}")
+        appendln("This object = ${getThisObject().getText()}")
+        appendln("Receiver argument = ${getReceiverArgument().getText()}")
 
-    addLine("\nValue arguments mapping:\n")
+        val valueArguments = getCall().getAllValueArguments()
+        if (!valueArguments.isEmpty()) {
+            appendln()
+            appendln("Value arguments mapping:")
+            appendln()
 
-    for (valueArgument in valueArguments) {
-        val argumentText = valueArgument.getText()
-        val argumentMappingText = getArgumentMapping(valueArgument).getText()
+            for (valueArgument in valueArguments) {
+                val argumentText = valueArgument.getText()
+                val argumentMappingText = getArgumentMapping(valueArgument).getText()
 
-        addLine("$argumentMappingText $argumentText")
-    }
-    return result.toString()
+                appendln("$argumentMappingText $argumentText")
+            }
+        }
+    }.toString()
 }

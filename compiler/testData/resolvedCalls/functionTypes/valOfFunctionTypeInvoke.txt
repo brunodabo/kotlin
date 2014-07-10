@@ -9,6 +9,8 @@ fun test(a: A) {
 
 Resolved call:
 
+Resulting descriptor: fun invoke(p1: Int): Int
+
 Explicit receiver kind = THIS_OBJECT
 This object = foo
 Receiver argument = NO_RECEIVER

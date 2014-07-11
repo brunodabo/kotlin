@@ -46,9 +46,8 @@ import org.jetbrains.jet.lang.psi.JetIfExpression
 import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns
 import org.jetbrains.jet.lang.psi.JetContainerNode
 import org.jetbrains.jet.plugin.completion.smart.isSubtypeOf
-import org.jetbrains.jet.lang.resolve.calls.util.DelegatingCall
-import org.jetbrains.jet.lang.resolve.calls.util.noErrorsInValueArguments
-import org.jetbrains.jet.lang.resolve.calls.util.hasUnmappedParameters
+import org.jetbrains.jet.lang.resolve.calls.callUtil.noErrorsInValueArguments
+import org.jetbrains.jet.lang.resolve.calls.callUtil.hasUnmappedParameters
 import org.jetbrains.jet.lang.descriptors.Visibilities
 import org.jetbrains.jet.lang.psi.JetBlockExpression
 import org.jetbrains.jet.plugin.util.makeNullable
@@ -56,6 +55,7 @@ import org.jetbrains.jet.plugin.util.makeNotNullable
 import org.jetbrains.jet.lang.psi.JetWhenConditionWithExpression
 import org.jetbrains.jet.lang.psi.JetWhenEntry
 import org.jetbrains.jet.lang.psi.JetWhenExpression
+import org.jetbrains.jet.lang.resolve.calls.util.DelegatingCall
 
 enum class Tail {
     COMMA

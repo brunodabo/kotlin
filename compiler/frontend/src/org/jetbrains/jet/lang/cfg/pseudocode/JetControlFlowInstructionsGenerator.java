@@ -284,9 +284,7 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         }
 
         @Override
-        public void returnValue(
-                @NotNull JetReturnExpression returnExpression, @NotNull PseudoValue returnValue, @NotNull JetElement subroutine
-        ) {
+        public void returnValue(@NotNull JetExpression returnExpression, @NotNull PseudoValue returnValue, @NotNull JetElement subroutine) {
             Label exitPoint = getExitPoint(subroutine);
             handleJumpInsideTryFinally(exitPoint);
             add(new ReturnValueInstruction(returnExpression, getCurrentScope(), exitPoint, returnValue));
@@ -420,7 +418,8 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         @Override
         public InstructionWithValue loadStringTemplate(@NotNull JetStringTemplateExpression expression, @NotNull List<PseudoValue> inputValues) {
             if (inputValues.isEmpty()) return read(expression);
-            return magic(expression, expression, inputValues, PseudocodePackage.expectedTypeFor(AllTypes.instance$, inputValues), false);
+            Map<PseudoValue, TypePredicate> predicate = PseudocodePackage.expectedTypeFor(AllTypes.instance$, inputValues);
+            return magic(expression, expression, inputValues, predicate, MagicKind.STRING_TEMPLATE);
         }
 
         @NotNull
@@ -430,10 +429,10 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
                 @Nullable JetElement valueElement,
                 @NotNull List<PseudoValue> inputValues,
                 @NotNull Map<PseudoValue, TypePredicate> expectedTypes,
-                boolean synthetic
+                @NotNull MagicKind kind
         ) {
             MagicInstruction instruction = MagicInstruction.object$.create(
-                    instructionElement, valueElement, getCurrentScope(), synthetic, inputValues, expectedTypes, valueFactory
+                    instructionElement, valueElement, getCurrentScope(), inputValues, expectedTypes, kind, valueFactory
             );
             add(instruction);
             return instruction;
@@ -460,14 +459,14 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         @NotNull
         @Override
         public CallInstruction call(
-                @NotNull JetExpression expression,
+                @NotNull JetElement valueElement,
                 @NotNull ResolvedCall<?> resolvedCall,
                 @NotNull Map<PseudoValue, ReceiverValue> receiverValues,
                 @NotNull Map<PseudoValue, ValueParameterDescriptor> arguments
         ) {
             JetType returnType = resolvedCall.getResultingDescriptor().getReturnType();
             CallInstruction instruction = CallInstruction.object$.create(
-                    expression,
+                    valueElement,
                     getCurrentScope(),
                     resolvedCall,
                     receiverValues,
@@ -499,7 +498,21 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
                     throw new IllegalArgumentException("Invalid operation: " + operation);
             }
 
-            return magic(expression, expression, inputValues, expectedTypes, false);
+            return magic(expression, expression, inputValues, expectedTypes, getMagicKind(operation));
+        }
+
+        @NotNull
+        private MagicKind getMagicKind(@NotNull PredefinedOperation operation) {
+            switch(operation) {
+                case AND:
+                    return MagicKind.AND;
+                case OR:
+                    return MagicKind.OR;
+                case NOT_NULL_ASSERTION:
+                    return MagicKind.NOT_NULL_ASSERTION;
+                default:
+                    throw new IllegalArgumentException("Invalid operation: " + operation);
+            }
         }
 
         @Override

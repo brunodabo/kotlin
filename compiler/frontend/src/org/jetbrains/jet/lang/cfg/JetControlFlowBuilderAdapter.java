@@ -72,9 +72,9 @@ public abstract class JetControlFlowBuilderAdapter implements JetControlFlowBuil
             @Nullable JetElement valueElement,
             @NotNull List<PseudoValue> inputValues,
             @NotNull Map<PseudoValue, TypePredicate> expectedTypes,
-            boolean synthetic
+            @NotNull MagicKind kind
     ) {
-        return getDelegateBuilder().magic(instructionElement, valueElement, inputValues, expectedTypes, synthetic);
+        return getDelegateBuilder().magic(instructionElement, valueElement, inputValues, expectedTypes, kind);
     }
 
     @NotNull
@@ -96,12 +96,12 @@ public abstract class JetControlFlowBuilderAdapter implements JetControlFlowBuil
     @NotNull
     @Override
     public CallInstruction call(
-            @NotNull JetExpression expression,
+            @NotNull JetElement valueElement,
             @NotNull ResolvedCall<?> resolvedCall,
             @NotNull Map<PseudoValue, ReceiverValue> receiverValues,
             @NotNull Map<PseudoValue, ValueParameterDescriptor> arguments
     ) {
-        return getDelegateBuilder().call(expression, resolvedCall, receiverValues, arguments);
+        return getDelegateBuilder().call(valueElement, resolvedCall, receiverValues, arguments);
     }
 
     @NotNull
@@ -233,7 +233,7 @@ public abstract class JetControlFlowBuilderAdapter implements JetControlFlowBuil
     }
 
     @Override
-    public void returnValue(@NotNull JetReturnExpression returnExpression, @NotNull PseudoValue returnValue, @NotNull JetElement subroutine) {
+    public void returnValue(@NotNull JetExpression returnExpression, @NotNull PseudoValue returnValue, @NotNull JetElement subroutine) {
         getDelegateBuilder().returnValue(returnExpression, returnValue, subroutine);
     }
 

@@ -63,6 +63,7 @@ import com.sun.jdi.StackFrame
 import com.sun.jdi.VirtualMachine
 import org.jetbrains.jet.codegen.AsmUtil
 import com.sun.jdi.InvalidStackFrameException
+import org.jetbrains.jet.plugin.codeInsight.ShortenReferences
 
 private val RECEIVER_NAME = "\$receiver"
 private val THIS_NAME = "this"
@@ -282,6 +283,7 @@ private fun createFileForDebugger(codeFragment: JetCodeFragment,
     val jetFile = (PsiFileFactory.getInstance(codeFragment.getProject()) as PsiFileFactoryImpl)
             .trySetupPsiForFile(virtualFile, JetLanguage.INSTANCE, true, false) as JetFile
     jetFile.skipVisibilityCheck = true
+    jetFile.putUserData(ShortenReferences.CONTEXT_FOR_SYNTHETIC_CODE_ELEMENT, extractedFunction)
     return jetFile
 }
 

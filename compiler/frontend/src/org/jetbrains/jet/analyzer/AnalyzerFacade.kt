@@ -25,7 +25,6 @@ import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX
 import org.jetbrains.jet.lang.resolve.ImportPath
 import org.jetbrains.jet.lang.PlatformToKotlinClassMap
 import com.intellij.openapi.project.Project
-import org.jetbrains.jet.context.GlobalContextImpl
 import org.jetbrains.jet.context.GlobalContext
 import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns
 import java.util.ArrayList
@@ -58,22 +57,22 @@ public trait ModuleInfo<T : ModuleInfo<T>> {
 
     //TODO: modifyDependencies(OrderedMap [ModuleInfo -> ModuleDescriptor])
     public trait DependencyOnBuiltins {
-        fun adjustDependencies(builtinsModule: ModuleDescriptor, dependencies: MutableList<ModuleDescriptor>)
+        fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>)
     }
 
     public enum class DependenciesOnBuiltins: DependencyOnBuiltins {
 
-        override fun adjustDependencies(builtinsModule: ModuleDescriptor, dependencies: MutableList<ModuleDescriptor>) {
-            //TODO: report bug
+        override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
+            //TODO: KT-5457
         }
 
         NONE {
-            override fun adjustDependencies(builtinsModule: ModuleDescriptor, dependencies: MutableList<ModuleDescriptor>) {
+            override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
                 //do nothing
             }
         }
         LAST {
-            override fun adjustDependencies(builtinsModule: ModuleDescriptor, dependencies: MutableList<ModuleDescriptor>) {
+            override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
                 dependencies.add(builtinsModule)
             }
         }
@@ -106,8 +105,13 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
             modules.forEach {
                 module ->
                 val currentModule = resolverForProject.descriptorByModule[module]!!
-                val dependenciesDescriptors = module.dependencies().mapTo(ArrayList<ModuleDescriptorImplX>()) { dependency -> resolverForProject.descriptorByModule[dependency]!! }
-                module.dependencyOnBuiltins().adjustDependencies(KotlinBuiltIns.getInstance().getBuiltInsModule(), dependenciesDescriptors)
+                val dependenciesDescriptors = module.dependencies().mapTo(ArrayList<ModuleDescriptorImplX>()) {
+                    dependencyInfo ->
+                    resolverForProject.descriptorByModule[dependencyInfo]!!
+                }
+
+                val builtinsModule = KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX
+                module.dependencyOnBuiltins().adjustDependencies(builtinsModule, dependenciesDescriptors)
                 dependenciesDescriptors.forEach { currentModule.addDependencyOnModule(it) }
             }
         }

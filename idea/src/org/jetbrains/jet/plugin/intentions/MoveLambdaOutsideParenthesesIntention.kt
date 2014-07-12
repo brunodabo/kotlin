@@ -22,6 +22,7 @@ import org.jetbrains.jet.lang.psi.JetFunctionLiteralExpression
 import org.jetbrains.jet.lang.psi.JetPsiFactory
 import org.jetbrains.jet.lang.psi.JetExpression
 import org.jetbrains.jet.lang.psi.JetLabeledExpression
+import org.jetbrains.jet.lang.psi.JetFunctionLiteralArgument
 
 public class MoveLambdaOutsideParenthesesIntention : JetSelfTargetingIntention<JetCallExpression>(
         "move.lambda.outside.parentheses", javaClass()) {
@@ -31,17 +32,19 @@ public class MoveLambdaOutsideParenthesesIntention : JetSelfTargetingIntention<J
                     (expression is JetLabeledExpression && isLambdaOrLabeledLambda(expression.getBaseExpression()))
 
     override fun isApplicableTo(element: JetCallExpression): Boolean {
-        val args = element.getValueArguments()
+        val argumentList = element.getValueArgumentList()
+        if (argumentList == null) return false
+        val args = argumentList.getArguments()
         return args.size > 0 && isLambdaOrLabeledLambda(args.last?.getArgumentExpression())
     }
 
     override fun applyTo(element: JetCallExpression, editor: Editor) {
-        val args = element.getValueArguments()
+        val args = element.getValueArgumentList()!!.getArguments()
         val functionLiteral = args.last!!.getArgumentExpression()?.getText()
         val calleeText = element.getCalleeExpression()?.getText()
         if (calleeText == null || functionLiteral == null) return
 
-        val params = args.subList(0, args.size - 1).map { it?.asElement()?.getText() ?: "" }.makeString(", ", "(", ")")
+        val params = args.subList(0, args.size - 1).map { it.asElement().getText() ?: "" }.joinToString(", ", "(", ")")
 
         val newCall =
             if (params == "()") {

@@ -46,6 +46,8 @@ import org.jetbrains.jet.lang.resolve.BindingContext.RESOLVED_CALL
 import org.jetbrains.kotlin.util.sure
 import org.jetbrains.jet.lang.psi.psiUtil.getTextWithLocation
 import org.jetbrains.jet.lang.descriptors.FunctionDescriptor
+import org.jetbrains.jet.lang.psi.JetCallExpression
+import org.jetbrains.jet.lang.psi.JetFunctionLiteralArgument
 
 // resolved call
 
@@ -84,12 +86,17 @@ public fun Call.hasUnresolvedArguments(context: BindingContext): Boolean {
     }
 }
 
-public fun Call.getAllValueArguments(): List<ValueArgument> {
-    val arguments = getValueArguments() +
-                    getFunctionLiteralArguments().map { functionLiteral -> CallMaker.makeValueArgument(functionLiteral) }
-    [suppress("UNCHECKED_CAST")]
-    return arguments as List<ValueArgument>
-}
+[suppress("UNCHECKED_CAST")]
+public fun Call.getValueArgumentsInParentheses(): List<ValueArgument> =
+        getValueArguments().filter { it !is JetFunctionLiteralArgument } as List<ValueArgument>
+
+[suppress("UNCHECKED_CAST")]
+public fun JetCallExpression.getValueArgumentsInParentheses(): List<ValueArgument> =
+        getValueArguments().filter { it !is JetFunctionLiteralArgument } as List<ValueArgument>
+
+public fun Call.getFunctionLiteralArgument(): JetFunctionLiteralArgument? = getFunctionLiteralArguments().head
+
+public fun JetCallElement.getFunctionLiteralArgument(): JetFunctionLiteralArgument? = getFunctionLiteralArguments().head
 
 // Get call / resolved call from binding context
 

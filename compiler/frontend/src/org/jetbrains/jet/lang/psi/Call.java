@@ -45,7 +45,7 @@ public interface Call {
     List<? extends ValueArgument> getValueArguments();
 
     @NotNull
-    List<JetExpression> getFunctionLiteralArguments();
+    List<JetFunctionLiteralArgument> getFunctionLiteralArguments();
 
     @NotNull
     List<JetTypeProjection> getTypeArguments();

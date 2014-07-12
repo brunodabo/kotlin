@@ -48,10 +48,7 @@ public class ConvertToForEachLoopIntention : JetSelfTargetingIntention<JetExpres
             else -> null
         }
 
-        return when (argument) {
-            is JetFunctionLiteralExpression -> argument
-            else -> null
-        }
+        return argument as? JetFunctionLiteralExpression
     }
 
     override fun isApplicableTo(element: JetExpression): Boolean {
@@ -65,7 +62,7 @@ public class ConvertToForEachLoopIntention : JetSelfTargetingIntention<JetExpres
                     val selector = element.getSelectorExpression()
 
                     when (selector) {
-                        is JetCallExpression -> (selector.getValueArguments().size() + selector.getFunctionLiteralArguments().size()) == 1
+                        is JetCallExpression -> selector.getValueArguments().size() == 1
                         else -> false
                     }
                 }

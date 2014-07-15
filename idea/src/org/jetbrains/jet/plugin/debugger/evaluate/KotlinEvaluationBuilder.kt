@@ -283,7 +283,6 @@ private fun createFileForDebugger(codeFragment: JetCodeFragment,
     val jetFile = (PsiFileFactory.getInstance(codeFragment.getProject()) as PsiFileFactoryImpl)
             .trySetupPsiForFile(virtualFile, JetLanguage.INSTANCE, true, false) as JetFile
     jetFile.skipVisibilityCheck = true
-    jetFile.putUserData(ShortenReferences.CONTEXT_FOR_SYNTHETIC_CODE_ELEMENT, extractedFunction)
     return jetFile
 }
 

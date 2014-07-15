@@ -45,6 +45,8 @@ import org.jetbrains.jet.renderer.DescriptorRenderer;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.jetbrains.jet.lang.psi.PsiPackage.JetPsiFactory;
+
 public class ChangeVariableTypeFix extends JetIntentionAction<JetVariableDeclaration> {
     private final static Logger LOG = Logger.getInstance(ChangeVariableTypeFix.class);
 
@@ -83,21 +85,22 @@ public class ChangeVariableTypeFix extends JetIntentionAction<JetVariableDeclara
         SpecifyTypeExplicitlyAction.removeTypeAnnotation(element);
         PsiElement nameIdentifier = element.getNameIdentifier();
         assert nameIdentifier != null : "ChangeVariableTypeFix applied to variable without name";
-        element.addAfter(JetPsiFactory.createType(project, renderedType), nameIdentifier);
-        element.addAfter(JetPsiFactory.createColon(project), nameIdentifier);
+        JetPsiFactory psiFactory = JetPsiFactory(file);
+        element.addAfter(psiFactory.createType(renderedType), nameIdentifier);
+        element.addAfter(psiFactory.createColon(), nameIdentifier);
 
         if (element instanceof JetProperty) {
             JetPropertyAccessor getter = ((JetProperty) element).getGetter();
             JetTypeReference getterReturnTypeRef = getter == null ? null : getter.getReturnTypeReference();
             if (getterReturnTypeRef != null) {
-                getterReturnTypeRef.replace(JetPsiFactory.createType(project, renderedType));
+                getterReturnTypeRef.replace(psiFactory.createType(renderedType));
             }
 
             JetPropertyAccessor setter = ((JetProperty) element).getSetter();
             JetParameter setterParameter = setter == null ? null : setter.getParameter();
             JetTypeReference setterParameterTypeRef = setterParameter == null ? null : setterParameter.getTypeReference();
             if (setterParameterTypeRef != null) {
-                setterParameterTypeRef.replace(JetPsiFactory.createType(project, renderedType));
+                setterParameterTypeRef.replace(psiFactory.createType(renderedType));
             }
         }
     }

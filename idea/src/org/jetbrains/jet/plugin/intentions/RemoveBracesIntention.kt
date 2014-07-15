@@ -18,19 +18,10 @@ package org.jetbrains.jet.plugin.intentions
 
 import org.jetbrains.jet.lang.psi.JetBlockExpression
 import org.jetbrains.jet.lang.psi.JetPsiFactory
-import org.jetbrains.jet.lang.psi.JetWhileExpression
-import org.jetbrains.jet.lang.psi.JetIfExpression
-import org.jetbrains.jet.lang.psi.JetDoWhileExpression
-import org.jetbrains.jet.lang.psi.JetForExpression
 import org.jetbrains.jet.lang.psi.JetExpressionImpl
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.editor.Editor
-import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.PsiComment
-import org.jetbrains.jet.lang.psi.JetExpression
-import org.jetbrains.jet.plugin.intentions.declarations.JetDeclarationJoinLinesHandler
-import org.jetbrains.jet.lang.psi.JetProperty
 
 public class RemoveBracesIntention : JetSelfTargetingIntention<JetExpressionImpl>("remove.braces", javaClass()) {
     override fun isApplicableTo(element: JetExpressionImpl): Boolean {
@@ -59,11 +50,10 @@ public class RemoveBracesIntention : JetSelfTargetingIntention<JetExpressionImpl
 
         handleComments(element, jetBlockElement)
 
-        val project = element.getProject()
         val newElement = jetBlockElement.replace(firstStatement.copy())
 
         if (expressionKind == ExpressionKind.DOWHILE) {
-            newElement.getParent()!!.addAfter(JetPsiFactory.createNewLine(project), newElement)
+            newElement.getParent()!!.addAfter(JetPsiFactory(element).createNewLine(), newElement)
         }
     }
 
@@ -73,11 +63,12 @@ public class RemoveBracesIntention : JetSelfTargetingIntention<JetExpressionImpl
         while (sibling != null) {
             if (sibling is PsiComment) {
                 //cleans up extra whitespace
+                val psiFactory = JetPsiFactory(element)
                 if (element.getPrevSibling() is PsiWhiteSpace) {
-                    element.getPrevSibling()!!.replace(JetPsiFactory.createNewLine(element.getProject()))
+                    element.getPrevSibling()!!.replace(psiFactory.createNewLine())
                 }
                 val commentElement = element.getParent()!!.addBefore(sibling as PsiComment, element.getPrevSibling())
-                element.getParent()!!.addBefore(JetPsiFactory.createNewLine(element.getProject()), commentElement)
+                element.getParent()!!.addBefore(psiFactory.createNewLine(), commentElement)
             }
             sibling = sibling!!.getNextSibling()
         }

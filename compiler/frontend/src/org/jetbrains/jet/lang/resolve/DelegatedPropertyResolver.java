@@ -17,13 +17,11 @@
 package org.jetbrains.jet.lang.resolve;
 
 import com.google.common.collect.Lists;
-import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.*;
 import org.jetbrains.jet.lang.diagnostics.rendering.Renderers;
 import org.jetbrains.jet.lang.psi.*;
-import org.jetbrains.jet.lang.psi.psiUtil.PsiUtilPackage;
 import org.jetbrains.jet.lang.resolve.calls.CallResolver;
 import org.jetbrains.jet.lang.resolve.calls.autocasts.DataFlowInfo;
 import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintPosition;
@@ -48,8 +46,7 @@ import javax.inject.Inject;
 import java.util.List;
 
 import static org.jetbrains.jet.lang.diagnostics.Errors.*;
-import static org.jetbrains.jet.lang.psi.JetPsiFactory.createExpression;
-import static org.jetbrains.jet.lang.psi.JetPsiFactory.createSimpleName;
+import static org.jetbrains.jet.lang.psi.PsiPackage.JetPsiFactory;
 import static org.jetbrains.jet.lang.psi.psiUtil.PsiUtilPackage.getCalleeExpressionIfAny;
 import static org.jetbrains.jet.lang.resolve.BindingContext.*;
 import static org.jetbrains.jet.lang.types.TypeUtils.NO_EXPECTED_TYPE;
@@ -175,14 +172,17 @@ public class DelegatedPropertyResolver {
         ExpressionTypingContext context = ExpressionTypingContext.newContext(
                 expressionTypingServices, trace, scope,
                 DataFlowInfo.EMPTY, TypeUtils.NO_EXPECTED_TYPE);
-        Project project = expressionTypingServices.getProject();
 
         boolean hasThis = propertyDescriptor.getReceiverParameter() != null || propertyDescriptor.getExpectedThisObject() != null;
 
         List<JetExpression> arguments = Lists.newArrayList();
-        arguments.add(createExpression(project, hasThis ? "this" : "null"));
+        JetPsiFactory psiFactory = JetPsiFactory(delegateExpression);
+        arguments.add(psiFactory.createExpression(hasThis ? "this" : "null"));
 
-        arguments.add(createExpression(project, KotlinBuiltIns.getInstance().getPropertyMetadataImpl().getName().asString() + "(\"" + propertyDescriptor.getName().asString() + "\")"));
+        arguments.add(psiFactory.createExpression(KotlinBuiltIns.getInstance().getPropertyMetadataImpl().getName().asString() +
+                                               "(\"" +
+                                               propertyDescriptor.getName().asString() +
+                                               "\")"));
 
         if (!isGet) {
             JetReferenceExpression fakeArgument = (JetReferenceExpression) createFakeExpressionOfType(expressionTypingServices.getProject(), trace,
@@ -194,7 +194,7 @@ public class DelegatedPropertyResolver {
         }
 
         Name functionName = Name.identifier(isGet ? "get" : "set");
-        JetReferenceExpression fakeCalleeExpression = createSimpleName(project, functionName.asString());
+        JetReferenceExpression fakeCalleeExpression = psiFactory.createSimpleName(functionName.asString());
 
         ExpressionReceiver receiver = new ExpressionReceiver(delegateExpression, delegateType);
         Call call = CallMaker.makeCallWithExpressions(fakeCalleeExpression, receiver, null, fakeCalleeExpression, arguments, Call.CallType.DEFAULT);

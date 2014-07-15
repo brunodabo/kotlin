@@ -71,12 +71,11 @@ import com.intellij.openapi.ui.popup.LightweightWindowEvent
 fun JetSimpleNameExpression.changeQualifiedName(fqName: FqName): JetElement {
     assert (!fqName.isRoot(), "Can't set empty FqName for element $this")
 
-    val project = getProject()
-
     val shortName = fqName.shortName().asString()
+    val psiFactory = JetPsiFactory(this)
     val fqNameBase = (getParent() as? JetCallExpression)?.let { parent ->
         val callCopy = parent.copy() as JetCallExpression
-        callCopy.getCalleeExpression()!!.replace(JetPsiFactory.createSimpleName(project, shortName)).getParent()!!.getText()
+        callCopy.getCalleeExpression()!!.replace(psiFactory.createSimpleName(shortName)).getParent()!!.getText()
     } ?: shortName
 
     val text = if (!fqName.isOneSegmentFQN()) "${fqName.parent().asString()}.$fqNameBase" else fqNameBase
@@ -85,9 +84,9 @@ fun JetSimpleNameExpression.changeQualifiedName(fqName: FqName): JetElement {
     return when (elementToReplace) {
         is JetUserType -> {
             val typeText = "$text${elementToReplace.getTypeArgumentList()?.getText() ?: ""}"
-            elementToReplace.replace(JetPsiFactory.createType(project, typeText).getTypeElement()!!)
+            elementToReplace.replace(psiFactory.createType(typeText).getTypeElement()!!)
         }
-        else -> elementToReplace.replace(JetPsiFactory.createExpression(project, text))
+        else -> elementToReplace.replace(psiFactory.createExpression(text))
     } as JetElement
 }
 
@@ -142,7 +141,7 @@ public fun PsiElement.isInJavaSourceRoot(): Boolean =
         !JavaProjectRootsUtil.isOutsideJavaSourceRoot(getContainingFile())
 
 public inline fun JetFile.createTempCopy(textTransform: (String) -> String): JetFile {
-    val tmpFile = JetPsiFactory.createFile(getProject(), getName(), textTransform(getText() ?: ""))
+    val tmpFile = JetPsiFactory(this).createFile(getName(), textTransform(getText() ?: ""))
     tmpFile.setOriginalFile(this)
     tmpFile.skipVisibilityCheck = skipVisibilityCheck
     return tmpFile

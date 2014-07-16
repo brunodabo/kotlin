@@ -106,7 +106,9 @@ public class QuickFixFactoryForTypeMismatchError implements JetIntentionActionsF
 
         ResolvedCall<? extends CallableDescriptor> resolvedCall = CallUtilPackage.getParentResolvedCall(expression, context, true);
         if (resolvedCall != null) {
-            JetExpression parentIf = QuickFixUtil.getParentIf(expression);
+            // to fix 'type mismatch' on 'if' branches
+            // todo: the same with 'when'
+            JetExpression parentIf = QuickFixUtil.getParentIfForBranch(expression);
             JetExpression argumentExpression = (parentIf != null) ? parentIf : expression;
             ValueArgument valueArgument = CallUtilPackage.getValueArgumentForExpression(resolvedCall.getCall(), argumentExpression);
             if (valueArgument != null) {
@@ -122,7 +124,7 @@ public class QuickFixFactoryForTypeMismatchError implements JetIntentionActionsF
 
     @Nullable
     private static JetFunction getFunctionDeclaration(@NotNull ResolvedCall<?> resolvedCall) {
-        PsiElement result = QuickFixUtil.safeGetDeclaration(resolvedCall);
+        PsiElement result = QuickFixUtil.safeGetDeclaration(resolvedCall.getResultingDescriptor());
         if (result instanceof JetFunction) {
             return (JetFunction) result;
         }

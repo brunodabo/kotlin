@@ -107,26 +107,33 @@ public class QuickFixUtil {
     }
 
     @Nullable
-    public static PsiElement safeGetDeclaration(@NotNull ResolvedCall<?> resolvedCall) {
-        List<PsiElement> declarations = DescriptorToSourceUtils.descriptorToDeclarations(resolvedCall.getResultingDescriptor());
+    public static PsiElement safeGetDeclaration(@Nullable CallableDescriptor descriptor) {
         //do not create fix if descriptor has more than one overridden declaration
-        if (declarations.size() == 1) {
-            return declarations.iterator().next();
-        }
-        return null;
+        if (descriptor == null || descriptor.getOverriddenDescriptors().size() > 1) return null;
+        return DescriptorToSourceUtils.descriptorToDeclaration(descriptor);
     }
 
     @Nullable
     public static JetParameter getParameterDeclarationForValueArgument(@NotNull ResolvedCall<?> resolvedCall, @Nullable ValueArgument valueArgument) {
         ValueParameterDescriptor parameterDescriptor = CallUtilPackage.getParameterForArgument(resolvedCall, valueArgument);
-        if (parameterDescriptor == null || parameterDescriptor.getOverriddenDescriptors().size() > 1) return null;
-        return (JetParameter)DescriptorToDeclarationUtil.getDeclaration(resolvedCall.getCall().getCallElement().getProject(), parameterDescriptor);
+        return (JetParameter) safeGetDeclaration(parameterDescriptor);
     }
 
     private static boolean equalOrLastInThenOrElse(JetExpression thenOrElse, JetExpression expression) {
         if (thenOrElse == expression) return true;
         return thenOrElse instanceof JetBlockExpression && expression.getParent() == thenOrElse &&
                PsiTreeUtil.getNextSiblingOfType(expression, JetExpression.class) == null;
+    }
+
+    @Nullable
+    public static JetIfExpression getParentIfForBranch(@Nullable JetExpression expression) {
+        JetIfExpression ifExpression = PsiTreeUtil.getParentOfType(expression, JetIfExpression.class, true);
+        if (ifExpression == null) return null;
+        if (equalOrLastInThenOrElse(ifExpression.getThen(), expression)
+            || equalOrLastInThenOrElse(ifExpression.getElse(), expression)) {
+            return ifExpression;
+        }
+        return null;
     }
 
     public static boolean canEvaluateTo(JetExpression parent, JetExpression child) {
@@ -138,21 +145,10 @@ public class QuickFixUtil {
                 child = (JetExpression) child.getParent();
                 continue;
             }
-            child = getParentIf(child);
+            child = getParentIfForBranch(child);
             if (child == null) return false;
         }
         return true;
-    }
-
-    @Nullable
-    public static JetExpression getParentIf(@Nullable JetExpression expression) {
-        JetIfExpression ifExpression = PsiTreeUtil.getParentOfType(expression, JetIfExpression.class, true);
-        if (ifExpression == null) return null;
-        if (equalOrLastInThenOrElse(ifExpression.getThen(), expression)
-                || equalOrLastInThenOrElse(ifExpression.getElse(), expression)) {
-            return ifExpression;
-        }
-        return null;
     }
 
     public static boolean canFunctionOrGetterReturnExpression(@NotNull JetDeclaration functionOrGetter, @NotNull JetExpression expression) {

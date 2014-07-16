@@ -47,8 +47,8 @@ import org.jetbrains.jet.lang.psi.psiUtil.getTextWithLocation
 import org.jetbrains.jet.lang.descriptors.FunctionDescriptor
 import org.jetbrains.jet.lang.psi.JetCallExpression
 import org.jetbrains.jet.lang.psi.JetFunctionLiteralArgument
-import org.jetbrains.jet.lang.psi.JetDeclarationWithBody
 import org.jetbrains.jet.lang.psi.JetFunctionLiteralExpression
+import org.jetbrains.jet.lang.psi.JetFunctionLiteral
 
 // resolved call
 
@@ -109,7 +109,7 @@ public fun Call.getValueArgumentForExpression(expression: JetExpression): ValueA
         return when {
             deparenthesized != this -> deparenthesized
             this is JetFunctionLiteralExpression -> this.getFunctionLiteral()
-            this is JetDeclarationWithBody -> this.getBodyExpression()
+            this is JetFunctionLiteral -> this.getBodyExpression()
             else -> null
         }
     }

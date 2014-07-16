@@ -20,7 +20,6 @@ import org.jetbrains.jet.lang.psi.JetFunctionLiteralArgument
 import org.jetbrains.jet.lang.psi.JetCallExpression
 import org.jetbrains.jet.lang.psi.JetExpression
 import org.jetbrains.jet.lang.resolve.BindingContext
-import org.jetbrains.jet.lang.resolve.calls.callUtil.getFunctionLiteralArgument
 import org.jetbrains.jet.lang.resolve.calls.callUtil.getValueArgumentsInParentheses
 import org.jetbrains.jet.lang.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.jet.lang.resolve.calls.model.ArgumentMatch
@@ -48,15 +47,15 @@ fun JetFunctionLiteralArgument.moveInsideParenthesesAndReplaceWith(
         psiFactory.createArgument(replacement)
     }
 
-    val functionLiteralArgument = newCallExpression.getFunctionLiteralArgument()!!
+    val functionLiteralArgument = newCallExpression.getFunctionLiteralArguments().head!!
     val valueArgumentList = newCallExpression.getValueArgumentList() ?: psiFactory.createCallArguments("()")
 
-    val closingBracket = valueArgumentList.getLastChild()
+    val closingParenthesis = valueArgumentList.getLastChild()
     if (valueArgumentList.getArguments().isNotEmpty()) {
-        valueArgumentList.addBefore(psiFactory.createComma(), closingBracket)
-        valueArgumentList.addBefore(psiFactory.createWhiteSpace(), closingBracket)
+        valueArgumentList.addBefore(psiFactory.createComma(), closingParenthesis)
+        valueArgumentList.addBefore(psiFactory.createWhiteSpace(), closingParenthesis)
     }
-    valueArgumentList.addBefore(argument, closingBracket)
+    valueArgumentList.addBefore(argument, closingParenthesis)
 
     (functionLiteralArgument.getPrevSibling() as? PsiWhiteSpace)?.delete()
     if (newCallExpression.getValueArgumentList() != null) {

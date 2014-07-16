@@ -17,7 +17,6 @@
 package org.jetbrains.jet.lang.psi
 
 import com.intellij.lang.ASTNode
-import org.jetbrains.jet.lang.resolve.calls.callUtil.getFunctionLiteralArgument
 import com.intellij.psi.PsiWhiteSpace
 
 public class JetFunctionLiteralArgument(node: ASTNode) : JetValueArgument(node) {

@@ -91,17 +91,12 @@ public fun Call.hasUnresolvedArguments(context: BindingContext): Boolean {
     }
 }
 
-[suppress("UNCHECKED_CAST")]
-public fun Call.getValueArgumentsInParentheses(): List<ValueArgument> =
-        getValueArguments().filter { it !is JetFunctionLiteralArgument } as List<ValueArgument>
+public fun Call.getValueArgumentsInParentheses(): List<ValueArgument> = getValueArguments().filterArgsInParentheses()
+
+public fun JetCallExpression.getValueArgumentsInParentheses(): List<ValueArgument> = getValueArguments().filterArgsInParentheses()
 
 [suppress("UNCHECKED_CAST")]
-public fun JetCallExpression.getValueArgumentsInParentheses(): List<ValueArgument> =
-        getValueArguments().filter { it !is JetFunctionLiteralArgument } as List<ValueArgument>
-
-public fun Call.getFunctionLiteralArgument(): JetFunctionLiteralArgument? = getFunctionLiteralArguments().head
-
-public fun JetCallElement.getFunctionLiteralArgument(): JetFunctionLiteralArgument? = getFunctionLiteralArguments().head
+private fun List<ValueArgument?>.filterArgsInParentheses() = filter { it !is JetFunctionLiteralArgument } as List<ValueArgument>
 
 public fun Call.getValueArgumentForExpression(expression: JetExpression): ValueArgument? {
     fun JetElement.deparenthesizeStructurally(): JetElement? {

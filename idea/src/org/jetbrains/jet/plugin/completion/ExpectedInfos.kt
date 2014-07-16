@@ -57,7 +57,6 @@ import org.jetbrains.jet.lang.psi.JetWhenEntry
 import org.jetbrains.jet.lang.psi.JetWhenExpression
 import org.jetbrains.jet.lang.resolve.calls.util.DelegatingCall
 import org.jetbrains.jet.lang.psi.JetFunctionLiteralArgument
-import org.jetbrains.jet.lang.resolve.calls.callUtil.getFunctionLiteralArgument
 
 enum class Tail {
     COMMA
@@ -92,7 +91,7 @@ class ExpectedInfos(val bindingContext: BindingContext, val moduleDescriptor: Mo
         val functionLiteralArgument = expressionWithType.getParent() as? JetFunctionLiteralArgument
         val callExpression = functionLiteralArgument?.getParent() as? JetCallExpression
         if (callExpression != null) {
-            if (callExpression.getFunctionLiteralArgument()?.getArgumentExpression() == expressionWithType) {
+            if (callExpression.getFunctionLiteralArguments().head?.getArgumentExpression() == expressionWithType) {
                 return calculateForArgument(callExpression, callExpression.getValueArguments().size - 1, true)
             }
         }

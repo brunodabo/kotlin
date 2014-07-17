@@ -31,9 +31,9 @@ import org.jetbrains.jet.codegen.context.PackageContext;
 import org.jetbrains.jet.codegen.state.JetTypeMapper;
 import org.jetbrains.jet.descriptors.serialization.descriptors.DeserializedCallableMemberDescriptor;
 import org.jetbrains.jet.lang.descriptors.*;
-import org.jetbrains.jet.lang.descriptors.annotations.Annotations;
-import org.jetbrains.jet.lang.descriptors.impl.SimpleFunctionDescriptorImpl;
-import org.jetbrains.jet.lang.descriptors.impl.TypeParameterDescriptorImpl;
+import org.jetbrains.jet.lang.psi.JetFile;
+import org.jetbrains.jet.lang.psi.codeFragmentUtil.CodeFragmentUtilPackage;
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.CallResolverUtil;
 import org.jetbrains.jet.lang.resolve.java.descriptor.JavaPackageFragmentDescriptor;
@@ -51,10 +51,10 @@ import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import static org.jetbrains.jet.lang.descriptors.Modality.ABSTRACT;
+import static org.jetbrains.jet.lang.descriptors.Modality.FINAL;
 
 public class JvmCodegenUtil {
 
@@ -71,28 +71,6 @@ public class JvmCodegenUtil {
 
     public static boolean isInterface(JetType type) {
         return isInterface(type.getConstructor().getDeclarationDescriptor());
-    }
-
-    public static SimpleFunctionDescriptor createInvoke(FunctionDescriptor fd) {
-        int arity = fd.getValueParameters().size();
-        SimpleFunctionDescriptorImpl invokeDescriptor = SimpleFunctionDescriptorImpl.create(
-                fd.getExpectedThisObject() != null
-                ? KotlinBuiltIns.getInstance().getExtensionFunction(arity) : KotlinBuiltIns.getInstance().getFunction(arity),
-                Annotations.EMPTY,
-                Name.identifier("invoke"),
-                CallableMemberDescriptor.Kind.DECLARATION,
-                SourceElement.NO_SOURCE
-        );
-
-        invokeDescriptor.initialize(DescriptorUtils.getReceiverParameterType(fd.getReceiverParameter()),
-                                    fd.getExpectedThisObject(),
-                                    Collections.<TypeParameterDescriptorImpl>emptyList(),
-                                    fd.getValueParameters(),
-                                    fd.getReturnType(),
-                                    Modality.FINAL,
-                                    Visibilities.PUBLIC
-        );
-        return invokeDescriptor;
     }
 
     public static boolean isConst(@NotNull CalculatedClosure closure) {
@@ -150,12 +128,11 @@ public class JvmCodegenUtil {
         return type.getConstructor().getDeclarationDescriptor().getOriginal() == classifier.getOriginal();
     }
 
-    public static boolean isCallInsideSameClassAsDeclared(CallableMemberDescriptor declarationDescriptor, CodegenContext context) {
-        boolean isFakeOverride = declarationDescriptor.getKind() == CallableMemberDescriptor.Kind.FAKE_OVERRIDE;
-        boolean isDelegate = declarationDescriptor.getKind() == CallableMemberDescriptor.Kind.DELEGATION;
+    private static boolean isCallInsideSameClassAsDeclared(@NotNull CallableMemberDescriptor descriptor, @NotNull CodegenContext context) {
+        boolean isFakeOverride = descriptor.getKind() == CallableMemberDescriptor.Kind.FAKE_OVERRIDE;
+        boolean isDelegate = descriptor.getKind() == CallableMemberDescriptor.Kind.DELEGATION;
 
-        DeclarationDescriptor containingDeclaration = declarationDescriptor.getContainingDeclaration();
-        containingDeclaration = containingDeclaration.getOriginal();
+        DeclarationDescriptor containingDeclaration = descriptor.getContainingDeclaration().getOriginal();
 
         return !isFakeOverride && !isDelegate &&
                (((context.hasThisDescriptor() && containingDeclaration == context.getThisDescriptor()) ||
@@ -246,32 +223,40 @@ public class JvmCodegenUtil {
     }
 
     public static boolean couldUseDirectAccessToProperty(
-            @NotNull PropertyDescriptor propertyDescriptor,
+            @NotNull PropertyDescriptor property,
             boolean forGetter,
-            boolean isInsideClass,
             boolean isDelegated,
-            MethodContext context
+            @NotNull MethodContext context
     ) {
-        if (context.isInlineFunction()) {
-            return false;
-        }
-        PropertyAccessorDescriptor accessorDescriptor = forGetter ? propertyDescriptor.getGetter() : propertyDescriptor.getSetter();
-        boolean isExtensionProperty = propertyDescriptor.getReceiverParameter() != null;
-        boolean specialTypeProperty = isDelegated ||
-                                      isExtensionProperty ||
-                                      DescriptorUtils.isClassObject(propertyDescriptor.getContainingDeclaration()) ||
-                                      JetTypeMapper.isAccessor(propertyDescriptor);
-        return isInsideClass &&
-               !specialTypeProperty &&
-               (accessorDescriptor == null ||
-                accessorDescriptor.isDefault() &&
-                (!isExternallyAccessible(propertyDescriptor) || accessorDescriptor.getModality() == Modality.FINAL));
+        if (JetTypeMapper.isAccessor(property)) return false;
+
+        // Inline functions can't use direct access because a field may not be visible at the call site
+        if (context.isInlineFunction()) return false;
+
+        // Only properties of the same class can be directly accessed, except when we are evaluating expressions in the debugger
+        if (!isCallInsideSameClassAsDeclared(property, context) && !isDebuggerContext(context)) return false;
+
+        // Delegated and extension properties have no backing fields
+        if (isDelegated || property.getReceiverParameter() != null) return false;
+
+        // Class object properties cannot be accessed directly because their backing fields are stored in the containing class
+        if (DescriptorUtils.isClassObject(property.getContainingDeclaration())) return false;
+
+        PropertyAccessorDescriptor accessor = forGetter ? property.getGetter() : property.getSetter();
+
+        // If there's no accessor declared we can use direct access
+        if (accessor == null) return true;
+
+        // If the accessor is non-default (i.e. it has some code) we should call that accessor and not use direct access
+        if (accessor.hasBody()) return false;
+
+        // If the accessor is private or final, it can't be overridden in the subclass and thus we can use direct access
+        return property.getVisibility() == Visibilities.PRIVATE || accessor.getModality() == FINAL;
     }
 
-    private static boolean isExternallyAccessible(@NotNull PropertyDescriptor propertyDescriptor) {
-        return propertyDescriptor.getVisibility() != Visibilities.PRIVATE ||
-               DescriptorUtils.isClassObject(propertyDescriptor.getContainingDeclaration()) ||
-               DescriptorUtils.isTopLevelDeclaration(propertyDescriptor);
+    private static boolean isDebuggerContext(@NotNull MethodContext context) {
+        JetFile file = DescriptorToSourceUtils.getContainingFile(context.getContextDescriptor());
+        return file != null && CodeFragmentUtilPackage.getSkipVisibilityCheck(file);
     }
 
     @NotNull

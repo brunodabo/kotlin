@@ -24,6 +24,7 @@ import org.jetbrains.jet.lang.psi.JetReferenceExpression;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.resolve.calls.model.VariableAsFunctionResolvedCall;
+import org.jetbrains.jet.lang.resolve.calls.util.FakeCallableDescriptorForObject;
 import org.jetbrains.jet.lang.types.ErrorUtils;
 
 import java.util.Collection;
@@ -57,6 +58,10 @@ public class TracingStrategyImpl extends AbstractTracingStrategy {
         CallableDescriptor descriptor = resolvedCall.getCandidateDescriptor();
         if (resolvedCall instanceof VariableAsFunctionResolvedCall) {
             descriptor = ((VariableAsFunctionResolvedCall) resolvedCall).getVariableCall().getCandidateDescriptor();
+        }
+        if (descriptor instanceof FakeCallableDescriptorForObject) {
+            trace.record(REFERENCE_TARGET, reference, ((FakeCallableDescriptorForObject) descriptor).getClassDescriptor());
+            return;
         }
         DeclarationDescriptor storedReference = trace.get(REFERENCE_TARGET, reference);
         if (storedReference == null || !ErrorUtils.isError(descriptor)) {

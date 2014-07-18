@@ -29,6 +29,7 @@ import org.jetbrains.jet.lang.psi.JetSuperExpression;
 import org.jetbrains.jet.lang.resolve.DescriptorUtils;
 import org.jetbrains.jet.lang.resolve.calls.autocasts.AutoCastUtils;
 import org.jetbrains.jet.lang.resolve.calls.context.BasicCallResolutionContext;
+import org.jetbrains.jet.lang.resolve.calls.util.FakeCallableDescriptorForObject;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.resolve.scopes.JetScope;
 import org.jetbrains.jet.lang.resolve.scopes.JetScopeUtils;
@@ -280,12 +281,14 @@ public class TaskPrioritizer {
             @NotNull ExplicitReceiverKind explicitReceiverKind,
             @NotNull Call call
     ) {
-        for (D extension : descriptors) {
-            if (DescriptorUtils.isConstructorOfStaticNestedClass(extension)) {
-                // We don't want static nested classes' constructors to be resolved with expectedThisObject
+        for (D descriptor : descriptors) {
+            if (DescriptorUtils.isConstructorOfStaticNestedClass(descriptor)
+                    || descriptor instanceof FakeCallableDescriptorForObject) {
+                // We don't want static nested class constructor or class object / object (as callable)
+                // to be resolved with expectedThisObject
                 continue;
             }
-            ResolutionCandidate<D> candidate = ResolutionCandidate.create(call, extension);
+            ResolutionCandidate<D> candidate = ResolutionCandidate.create(call, descriptor);
             candidate.setThisObject(thisObject);
             candidate.setReceiverArgument(receiverParameter);
             candidate.setExplicitReceiverKind(explicitReceiverKind);

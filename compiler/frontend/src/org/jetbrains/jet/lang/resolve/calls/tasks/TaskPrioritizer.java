@@ -91,11 +91,11 @@ public class TaskPrioritizer {
         ReceiverValue explicitReceiver = context.call.getExplicitReceiver();
         if (explicitReceiver.exists() && explicitReceiver.getType() instanceof PackageType) {
             JetType receiverType = explicitReceiver.getType();
-            variants.add(Pair.create(receiverType.getMemberScope(), NO_RECEIVER));
             ReceiverValue value = ((PackageType) receiverType).getReceiverValue();
             if (value.exists()) {
                 variants.add(Pair.create(context.scope, value));
             }
+            variants.add(Pair.create(receiverType.getMemberScope(), NO_RECEIVER));
         }
         else {
             variants.add(Pair.create(context.scope, explicitReceiver));

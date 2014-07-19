@@ -328,3 +328,13 @@ public fun JetExpression.isFunctionLiteralOutsideParentheses(): Boolean {
         else -> false
     }
 }
+
+tailRecursive
+public fun JetExpression.isPartOfImportDirective(): Boolean {
+    val parent = getParent()
+    return when (parent) {
+        is JetDotQualifiedExpression -> parent.isPartOfImportDirective()
+        is JetImportDirective -> true
+        else -> false
+    }
+}

@@ -41,10 +41,15 @@ import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils
 
 // Navigation element of the resolved reference
 // For property accessor return enclosing property
+// For class object return enclosing class
 val PsiReference.unwrappedTarget: PsiElement?
     get() {
         val target = resolve()?.unwrapped
-        return if (target is JetPropertyAccessor) target.getParentByType(javaClass<JetProperty>()) else target
+        return when {
+            target is JetObjectDeclaration && target.getParent() is JetClassObject -> target.getParentByType(javaClass<JetClass>())
+            target is JetPropertyAccessor -> target.getParentByType(javaClass<JetProperty>())
+            else -> target
+        }
     }
 
 val JetDeclaration.descriptor: DeclarationDescriptor?

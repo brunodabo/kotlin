@@ -26,6 +26,16 @@ import org.jetbrains.jet.lang.psi.psiUtil.getParentByType
 import org.jetbrains.jet.lang.psi.JetDeclarationWithBody
 import org.jetbrains.jet.lang.resolve.DescriptorUtils
 import org.jetbrains.jet.lang.descriptors.impl.AnonymousFunctionDescriptor
+import org.jetbrains.jet.lang.descriptors.ClassDescriptor
+import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
+import org.jetbrains.jet.lang.psi.JetPsiUtil
+import org.jetbrains.jet.lang.resolve.calls.callUtil.getResolvedCall
+import org.jetbrains.jet.lang.psi.JetExpression
+import org.jetbrains.jet.lang.psi.JetExpressionWithLabel
+import org.jetbrains.jet.lang.descriptors.ConstructorDescriptor
+import org.jetbrains.jet.lang.psi.psiUtil.isPartOfImportDirective
+import org.jetbrains.jet.lang.descriptors.ClassKind
+import org.jetbrains.jet.lang.psi.JetUserType
 
 
 public fun JetReturnExpression.getTargetFunctionDescriptor(context: BindingContext): FunctionDescriptor? {
@@ -39,4 +49,27 @@ public fun JetReturnExpression.getTargetFunctionDescriptor(context: BindingConte
     return stream(containingFunctionDescriptor) { DescriptorUtils.getParentOfType(it, javaClass<FunctionDescriptor>()) }
             .dropWhile { it is AnonymousFunctionDescriptor }
             .firstOrNull()
+}
+
+public fun JetExpression.refersToClassObject(context: BindingContext): Boolean {
+    if (this !is JetSimpleNameExpression || this.isPartOfImportDirective()) return false
+
+    val parent = getParent()
+    if (parent is JetExpressionWithLabel || parent is JetUserType) return false
+
+    val descriptor = context[BindingContext.REFERENCE_TARGET, this]
+    if (descriptor !is ClassDescriptor
+            || descriptor.getKind() != ClassKind.CLASS
+            || descriptor.getClassObjectDescriptor() == null) return false
+
+    if (!JetPsiUtil.isLHSOfDot(this)) return true
+
+    val resolvedCall = (parent as? JetExpression).getResolvedCall(context)
+    val candidateDescriptor = resolvedCall?.getCandidateDescriptor()
+    val containingDeclaration = if (candidateDescriptor is ConstructorDescriptor) {
+        candidateDescriptor.getContainingDeclaration().getContainingDeclaration()
+    } else {
+        candidateDescriptor?.getContainingDeclaration()
+    }
+    return descriptor.getClassObjectDescriptor() == containingDeclaration
 }

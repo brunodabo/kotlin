@@ -27,10 +27,12 @@ import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
 import org.jetbrains.jet.lang.psi.psiUtil.getReceiverExpression
 import com.intellij.psi.PsiElement
 import org.jetbrains.jet.lang.types.JetType
+import org.jetbrains.jet.lang.descriptors.ClassKind
 
 public val DeclarationDescriptor.importableFqName: FqName?
     get() {
         if (this is ConstructorDescriptor) return getContainingDeclaration().importableFqName
+        if (this is ClassDescriptor && this.getKind() == ClassKind.CLASS_OBJECT) return getContainingDeclaration().importableFqName
         val mayBeUnsafe = DescriptorUtils.getFqName(this)
         return if (mayBeUnsafe.isSafe()) {
             mayBeUnsafe.toSafe()

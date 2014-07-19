@@ -69,6 +69,7 @@ import org.jetbrains.jet.plugin.intentions.declarations.DeclarationUtils
 import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils
 import org.jetbrains.jet.lang.psi.psiUtil.isFunctionLiteralOutsideParentheses
 import org.jetbrains.jet.plugin.util.psiModificationUtil.moveInsideParenthesesAndReplaceWith
+import org.jetbrains.jet.lang.resolve.bindingContextUtil.refersToClassObject
 
 private val DEFAULT_FUNCTION_NAME = "myFun"
 private val DEFAULT_RETURN_TYPE = KotlinBuiltIns.getInstance().getUnitType()
@@ -469,7 +470,11 @@ private fun ExtractionData.inferParametersInfo(
                     when(it.getKind()) {
                         ClassKind.OBJECT, ClassKind.ENUM_CLASS -> it as ClassDescriptor
                         ClassKind.CLASS_OBJECT, ClassKind.ENUM_ENTRY -> it.getContainingDeclaration() as? ClassDescriptor
-                        else -> if (ref.getParentByType(javaClass<JetTypeReference>()) != null) it as ClassDescriptor else null
+                        else -> when {
+                            originalRef.refersToClassObject(bindingContext) -> it.getContainingDeclaration() as? ClassDescriptor
+                            ref.getParentByType(javaClass<JetTypeReference>()) != null -> it as ClassDescriptor
+                            else -> null
+                        }
                     }
 
                 is ConstructorDescriptor -> it.getContainingDeclaration()

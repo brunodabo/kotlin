@@ -41,6 +41,8 @@ import org.jetbrains.jet.utils.keysToMap
 import com.intellij.psi.PsiMethod
 import org.jetbrains.jet.plugin.search.allScope
 import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils
+import org.jetbrains.jet.lang.resolve.bindingContextUtil.refersToClassObject
+import org.jetbrains.jet.lang.descriptors.ClassDescriptor
 
 public trait JetReference : PsiPolyVariantReference {
     public fun resolveToDescriptors(): Collection<DeclarationDescriptor>
@@ -146,6 +148,9 @@ public abstract class JetSimpleReference<T : JetReferenceExpression>(expression:
     override fun getTargetDescriptors(context: BindingContext): Collection<DeclarationDescriptor> {
         val targetDescriptor = context[BindingContext.REFERENCE_TARGET, expression]
         if (targetDescriptor != null) {
+            if (expression.refersToClassObject(context)) {
+                return listOf((targetDescriptor as ClassDescriptor).getClassObjectDescriptor()!!)
+            }
             return listOf(targetDescriptor)
         }
         return context[BindingContext.AMBIGUOUS_REFERENCE_TARGET, expression].orEmpty()

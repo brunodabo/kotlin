@@ -194,10 +194,9 @@ public class BodyResolver {
                 }
                 JetExpression delegateExpression = specifier.getDelegateExpression();
                 if (delegateExpression != null) {
-                    JetScope scope = scopeForConstructor == null
-                                     ? scopeForMemberResolution
-                                     : scopeForConstructor;
-                    JetType type = typeInferrer.getType(scope, delegateExpression, NO_EXPECTED_TYPE, c.getOuterDataFlowInfo(), trace);
+                    JetScope scope = scopeForConstructor == null ? scopeForMemberResolution : scopeForConstructor;
+                    JetType type = typeInferrer.getType(
+                            scope, delegateExpression, supertype != null ? supertype : NO_EXPECTED_TYPE, c.getOuterDataFlowInfo(), trace);
                     if (type != null && supertype != null) {
                         SimpleResolutionContext simpleResolutionContext = new SimpleResolutionContext(
                                 trace, scope, supertype, c.getOuterDataFlowInfo(), ContextDependency.INDEPENDENT,

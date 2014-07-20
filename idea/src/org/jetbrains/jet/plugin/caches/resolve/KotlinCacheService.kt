@@ -108,6 +108,9 @@ class KotlinCacheService(val project: Project) {
 
     public fun getLazyResolveSession(element: JetElement): ResolveSessionForBodies {
         val file = element.getContainingJetFile()
+        if (file.getName() == "dummy.kt") {
+            throw IllegalArgumentException("Should not analyze element created by JetPsiFactory")
+        }
         if (!isFileInScope(file)) {
             return getCacheForSyntheticFile(file).getLazyResolveSession()
         }

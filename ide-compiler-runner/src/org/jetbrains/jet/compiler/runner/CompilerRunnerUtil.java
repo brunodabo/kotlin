@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2013 JetBrains s.r.o.
+ * Copyright 2010-2014 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.jetbrains.jet.compiler.runner;
 
 import com.intellij.util.Function;
-import kotlin.Function1;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.cli.common.messages.MessageCollector;
@@ -80,13 +79,13 @@ public class CompilerRunnerUtil {
     public static ClassLoader getOrCreateClassLoader(KotlinPaths paths, MessageCollector messageCollector) {
         ClassLoader answer = ourClassLoaderRef.get();
         if (answer == null) {
-            answer = createClassloader(paths, messageCollector);
+            answer = createClassLoader(paths, messageCollector);
             ourClassLoaderRef = new SoftReference<ClassLoader>(answer);
         }
         return answer;
     }
 
-    private static URLClassLoader createClassloader(KotlinPaths paths, MessageCollector messageCollector) {
+    private static URLClassLoader createClassLoader(KotlinPaths paths, MessageCollector messageCollector) {
         List<File> jars = kompilerClasspath(paths, messageCollector);
         URL[] urls = new URL[jars.size()];
         for (int i = 0; i < urls.length; i++) {

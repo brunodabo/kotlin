@@ -2149,6 +2149,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest("idea/testData/intentions/convertAssertToIf/booleanConditionWithVariables.kt");
         }
         
+        @TestMetadata("doNotShortenReferenceInsideMessage.kt")
+        public void testDoNotShortenReferenceInsideMessage() throws Exception {
+            doTest("idea/testData/intentions/convertAssertToIf/doNotShortenReferenceInsideMessage.kt");
+        }
+        
         @TestMetadata("dotQualifiedCall.kt")
         public void testDotQualifiedCall() throws Exception {
             doTest("idea/testData/intentions/convertAssertToIf/dotQualifiedCall.kt");
@@ -3299,6 +3304,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
             doTest("idea/testData/intentions/insertExplicitTypeArguments/inapplicableTypeNotInferred.kt");
         }
         
+        @TestMetadata("insertImportForArg.kt")
+        public void testInsertImportForArg() throws Exception {
+            doTest("idea/testData/intentions/insertExplicitTypeArguments/insertImportForArg.kt");
+        }
+        
         @TestMetadata("insertManyTypes.kt")
         public void testInsertManyTypes() throws Exception {
             doTest("idea/testData/intentions/insertExplicitTypeArguments/insertManyTypes.kt");
@@ -3508,6 +3518,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
         @TestMetadata("shortenReferencesForReceiver.kt")
         public void testShortenReferencesForReceiver() throws Exception {
             doTest("idea/testData/intentions/makeTypeExplicitInLambda/shortenReferencesForReceiver.kt");
+        }
+        
+        @TestMetadata("shortenReferencesForReturnType.kt")
+        public void testShortenReferencesForReturnType() throws Exception {
+            doTest("idea/testData/intentions/makeTypeExplicitInLambda/shortenReferencesForReturnType.kt");
         }
         
         @TestMetadata("singleParam.kt")
@@ -4497,6 +4512,11 @@ public class IntentionTestGenerated extends AbstractIntentionTest {
     public static class SimplifyBooleanWithConstants extends AbstractIntentionTest {
         public void testAllFilesPresentInSimplifyBooleanWithConstants() throws Exception {
             JetTestUtils.assertAllTestsPresentByMetadata(this.getClass(), "org.jetbrains.jet.generators.tests.TestsPackage", new File("idea/testData/intentions/simplifyBooleanWithConstants"), Pattern.compile("^(.+)\\.kt$"), true);
+        }
+        
+        @TestMetadata("deeplyParenthesized.kt")
+        public void testDeeplyParenthesized() throws Exception {
+            doTest("idea/testData/intentions/simplifyBooleanWithConstants/deeplyParenthesized.kt");
         }
         
         @TestMetadata("inapplicableNoConstants.kt")

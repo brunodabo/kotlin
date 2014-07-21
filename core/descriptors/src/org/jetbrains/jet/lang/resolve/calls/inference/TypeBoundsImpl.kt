@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2013 JetBrains s.r.o.
+ * Copyright 2010-2014 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,241 +14,164 @@
  * limitations under the License.
  */
 
-package org.jetbrains.jet.lang.resolve.calls.inference;
+package org.jetbrains.jet.lang.resolve.calls.inference
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.intellij.openapi.util.Condition;
-import com.intellij.util.containers.ContainerUtil;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.jet.lang.descriptors.TypeParameterDescriptor;
-import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstructor;
-import org.jetbrains.jet.lang.types.*;
-import org.jetbrains.jet.lang.types.checker.JetTypeChecker;
+import org.jetbrains.jet.lang.descriptors.TypeParameterDescriptor
+import org.jetbrains.jet.lang.types.Variance
+import org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.Bound
+import org.jetbrains.jet.lang.types.JetType
+import org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.BoundKind
+import org.jetbrains.jet.lang.types.ErrorUtils
+import com.intellij.util.containers.ContainerUtil
+import org.jetbrains.jet.lang.types.CommonSupertypes
+import org.jetbrains.jet.lang.types.TypeUtils
+import com.google.common.collect.Lists
+import org.jetbrains.jet.lang.types.checker.JetTypeChecker
+import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstructor
+import java.util.LinkedHashSet
+import org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.BoundKind.*
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+public class TypeBoundsImpl(
+        override val typeVariable: TypeParameterDescriptor,
+        override val varianceOfPosition: Variance
+) : TypeBounds {
+    override val bounds = LinkedHashSet<Bound>()
 
-import static org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.BoundKind.LOWER_BOUND;
+    private var resultValues: Collection<JetType>? = null
 
-public class TypeBoundsImpl implements TypeBounds {
-    private final TypeParameterDescriptor typeVariable;
-    private final Variance varianceOfPosition;
-    private final Set<Bound> bounds = Sets.newLinkedHashSet();
-
-    private Collection<JetType> resultValues;
-
-    public TypeBoundsImpl(
-            @NotNull TypeParameterDescriptor typeVariable,
-            @NotNull Variance varianceOfPosition
-    ) {
-        this.typeVariable = typeVariable;
-        this.varianceOfPosition = varianceOfPosition;
+    public fun addBound(kind: BoundKind, constrainingType: JetType, position: ConstraintPosition) {
+        resultValues = null
+        bounds.add(Bound(constrainingType, kind, position))
     }
 
-    @NotNull
-    @Override
-    public Variance getVarianceOfPosition() {
-        return varianceOfPosition;
+    override fun isEmpty(): Boolean {
+        return getValues().isEmpty()
     }
 
-    public void addBound(@NotNull BoundKind kind, @NotNull JetType type, @NotNull ConstraintPosition position) {
-        resultValues = null;
-        bounds.add(new Bound(type, kind, position));
+    private fun filterBounds(bounds: Collection<Bound>, kind: BoundKind): Set<JetType> {
+        return filterBounds(bounds, kind, null)
     }
 
-    @Override
-    public boolean isEmpty() {
-        return getValues().isEmpty();
-    }
-
-    @NotNull
-    @Override
-    public TypeParameterDescriptor getTypeVariable() {
-        return typeVariable;
-    }
-
-    @Override
-    @NotNull
-    public Collection<Bound> getBounds() {
-        return bounds;
-    }
-
-    @NotNull
-    private static Set<JetType> filterBounds(
-            @NotNull Collection<Bound> bounds,
-            @NotNull BoundKind kind
-    ) {
-        return filterBounds(bounds, kind, null);
-    }
-
-    @NotNull
-    private static Set<JetType> filterBounds(
-            @NotNull Collection<Bound> bounds,
-            @NotNull BoundKind kind,
-            @Nullable Collection<JetType> errorValues
-    ) {
-        Set<JetType> result = Sets.newLinkedHashSet();
-        for (Bound bound : bounds) {
+    private fun filterBounds(bounds: Collection<Bound>, kind: BoundKind, errorValues: MutableCollection<JetType>?): Set<JetType> {
+        val result = LinkedHashSet<JetType>()
+        for (bound in bounds) {
             if (bound.kind == kind) {
-                if (!ErrorUtils.containsErrorType(bound.type)) {
-                    result.add(bound.type);
+                if (!ErrorUtils.containsErrorType(bound.constrainingType)) {
+                    result.add(bound.constrainingType)
                 }
-                else if (errorValues != null) {
-                    errorValues.add(bound.type);
+                else {
+                    errorValues?.add(bound.constrainingType)
                 }
             }
         }
-        return result;
+        return result
     }
 
-    /*package*/ TypeBoundsImpl copy() {
-        TypeBoundsImpl typeBounds = new TypeBoundsImpl(typeVariable, varianceOfPosition);
-        typeBounds.bounds.addAll(bounds);
-        typeBounds.resultValues = resultValues;
-        return typeBounds;
+    fun copy(): TypeBoundsImpl {
+        val typeBounds = TypeBoundsImpl(typeVariable, varianceOfPosition)
+        typeBounds.bounds.addAll(bounds)
+        typeBounds.resultValues = resultValues
+        return typeBounds
     }
 
-    @NotNull
-    public TypeBoundsImpl filter(@NotNull final Condition<ConstraintPosition> condition) {
-        TypeBoundsImpl result = new TypeBoundsImpl(typeVariable, varianceOfPosition);
-        result.bounds.addAll(ContainerUtil.filter(bounds, new Condition<Bound>() {
-            @Override
-            public boolean value(Bound bound) {
-                return condition.value(bound.position);
-            }
-        }));
-        return result;
+    public fun filter(condition: (ConstraintPosition) -> Boolean): TypeBoundsImpl {
+        val result = TypeBoundsImpl(typeVariable, varianceOfPosition)
+        result.bounds.addAll(bounds.filter { condition(it.position) })
+        return result
     }
 
-    @Nullable
-    @Override
-    public JetType getValue() {
-        Collection<JetType> values = getValues();
+    override fun getValue(): JetType? {
+        val values = getValues()
         if (values.size() == 1) {
-            return values.iterator().next();
+            return values.iterator().next()
         }
-        return null;
+        return null
     }
 
-    @NotNull
-    @Override
-    public Collection<JetType> getValues() {
+    override fun getValues(): Collection<JetType> {
         if (resultValues == null) {
-            resultValues = computeValues();
+            resultValues = computeValues()
         }
-        return resultValues;
+        return resultValues!!
     }
 
-    @NotNull
-    private Collection<JetType> computeValues() {
-        Set<JetType> values = Sets.newLinkedHashSet();
+    private fun computeValues(): Collection<JetType> {
+        val values = LinkedHashSet<JetType>()
         if (bounds.isEmpty()) {
-            return Collections.emptyList();
+            return listOf()
         }
-        boolean hasStrongBound = ContainerUtil.exists(bounds, new Condition<Bound>() {
-            @Override
-            public boolean value(Bound bound) {
-                return bound.position.isStrong();
-            }
-        });
+        val hasStrongBound = bounds.any { it.position.isStrong() }
         if (!hasStrongBound) {
-            return Collections.emptyList();
+            return listOf()
         }
 
-        Set<JetType> exactBounds = filterBounds(bounds, BoundKind.EXACT_BOUND, values);
+        val exactBounds = filterBounds(bounds, EXACT_BOUND, values)
         if (exactBounds.size() == 1) {
-            JetType exactBound = exactBounds.iterator().next();
+            val exactBound = exactBounds.iterator().next()
             if (tryPossibleAnswer(exactBound)) {
-                return Collections.singleton(exactBound);
+                return setOf(exactBound)
             }
         }
-        values.addAll(exactBounds);
+        values.addAll(exactBounds)
 
-        Collection<JetType> numberLowerBounds = new LinkedHashSet<JetType>();
-        Collection<JetType> generalLowerBounds = new LinkedHashSet<JetType>();
-        filterNumberTypes(filterBounds(bounds, LOWER_BOUND, values), numberLowerBounds, generalLowerBounds);
+        val (numberLowerBounds, generalLowerBounds) =
+                filterBounds(bounds, LOWER_BOUND, values).partition { it.getConstructor() is IntegerValueTypeConstructor }
 
-        JetType superTypeOfLowerBounds = CommonSupertypes.commonSupertypeForNonDenotableTypes(generalLowerBounds);
+        val superTypeOfLowerBounds = CommonSupertypes.commonSupertypeForNonDenotableTypes(generalLowerBounds)
         if (tryPossibleAnswer(superTypeOfLowerBounds)) {
-            return Collections.singleton(superTypeOfLowerBounds);
+            return setOf(superTypeOfLowerBounds!!)
         }
-        ContainerUtil.addIfNotNull(superTypeOfLowerBounds, values);
+        ContainerUtil.addIfNotNull(superTypeOfLowerBounds, values)
 
         //todo
         //fun <T> foo(t: T, consumer: Consumer<T>): T
         //foo(1, c: Consumer<Any>) - infer Int, not Any here
 
-        JetType superTypeOfNumberLowerBounds = TypeUtils.commonSupertypeForNumberTypes(numberLowerBounds);
+        val superTypeOfNumberLowerBounds = TypeUtils.commonSupertypeForNumberTypes(numberLowerBounds)
         if (tryPossibleAnswer(superTypeOfNumberLowerBounds)) {
-            return Collections.singleton(superTypeOfNumberLowerBounds);
+            return setOf(superTypeOfNumberLowerBounds!!)
         }
-        ContainerUtil.addIfNotNull(superTypeOfNumberLowerBounds, values);
+        ContainerUtil.addIfNotNull(superTypeOfNumberLowerBounds, values)
 
         if (superTypeOfLowerBounds != null && superTypeOfNumberLowerBounds != null) {
-            JetType superTypeOfAllLowerBounds = CommonSupertypes.commonSupertypeForNonDenotableTypes(
-                    Lists.newArrayList(superTypeOfLowerBounds, superTypeOfNumberLowerBounds));
+            val superTypeOfAllLowerBounds = CommonSupertypes.commonSupertypeForNonDenotableTypes(Lists.newArrayList(superTypeOfLowerBounds, superTypeOfNumberLowerBounds))
             if (tryPossibleAnswer(superTypeOfAllLowerBounds)) {
-                return Collections.singleton(superTypeOfAllLowerBounds);
+                return setOf(superTypeOfAllLowerBounds!!)
             }
         }
 
-        Set<JetType> upperBounds = filterBounds(bounds, BoundKind.UPPER_BOUND, values);
-        JetType intersectionOfUpperBounds = TypeUtils.intersect(JetTypeChecker.DEFAULT, upperBounds);
+        val upperBounds = filterBounds(bounds, TypeBounds.BoundKind.UPPER_BOUND, values)
+        val intersectionOfUpperBounds = TypeUtils.intersect(JetTypeChecker.DEFAULT, upperBounds)
         if (!upperBounds.isEmpty() && intersectionOfUpperBounds != null) {
             if (tryPossibleAnswer(intersectionOfUpperBounds)) {
-                return Collections.singleton(intersectionOfUpperBounds);
+                return setOf(intersectionOfUpperBounds)
             }
         }
 
-        values.addAll(filterBounds(bounds, BoundKind.UPPER_BOUND));
+        values.addAll(filterBounds(bounds, TypeBounds.BoundKind.UPPER_BOUND))
 
-        return values;
+        return values
     }
 
-    private static void filterNumberTypes(
-            @NotNull Collection<JetType> types,
-            @NotNull Collection<JetType> numberTypes,
-            @NotNull Collection<JetType> otherTypes
-    ) {
-        for (JetType type : types) {
-            if (type.getConstructor() instanceof IntegerValueTypeConstructor) {
-                numberTypes.add(type);
-            }
-            else {
-                otherTypes.add(type);
-            }
-        }
-    }
+    private fun tryPossibleAnswer(possibleAnswer: JetType?): Boolean {
+        if (possibleAnswer == null) return false
+        if (!possibleAnswer.getConstructor().isDenotable()) return false
 
-    private boolean tryPossibleAnswer(@Nullable JetType possibleAnswer) {
-        if (possibleAnswer == null) return false;
-        if (!possibleAnswer.getConstructor().isDenotable()) return false;
+        for (bound in bounds) {
+            when (bound.kind) {
+                LOWER_BOUND -> if (!JetTypeChecker.DEFAULT.isSubtypeOf(bound.constrainingType, possibleAnswer)) {
+                    return false
+                }
 
-        for (Bound bound : bounds) {
-            switch (bound.kind) {
-                case LOWER_BOUND:
-                    if (!JetTypeChecker.DEFAULT.isSubtypeOf(bound.type, possibleAnswer)) {
-                        return false;
-                    }
-                    break;
+                TypeBounds.BoundKind.UPPER_BOUND -> if (!JetTypeChecker.DEFAULT.isSubtypeOf(possibleAnswer, bound.constrainingType)) {
+                    return false
+                }
 
-                case UPPER_BOUND:
-                    if (!JetTypeChecker.DEFAULT.isSubtypeOf(possibleAnswer, bound.type)) {
-                        return false;
-                    }
-                    break;
-
-                case EXACT_BOUND:
-                    if (!JetTypeChecker.DEFAULT.equalTypes(bound.type, possibleAnswer)) {
-                        return false;
-                    }
-                    break;
+                TypeBounds.BoundKind.EXACT_BOUND -> if (!JetTypeChecker.DEFAULT.equalTypes(bound.constrainingType, possibleAnswer)) {
+                    return false
+                }
             }
         }
-        return true;
+        return true
     }
 }

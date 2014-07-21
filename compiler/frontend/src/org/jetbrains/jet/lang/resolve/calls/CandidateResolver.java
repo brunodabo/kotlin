@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.intellij.openapi.progress.ProgressIndicatorProvider;
+import kotlin.Function1;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jet.lang.descriptors.*;
@@ -317,10 +318,9 @@ public class CandidateResolver {
 
         // Restore type variables before alpha-conversion
         ConstraintSystem constraintSystemWithRightTypeParameters = constraintSystem.substituteTypeVariables(
-                new Function<TypeParameterDescriptor, TypeParameterDescriptor>() {
+                new Function1<TypeParameterDescriptor, TypeParameterDescriptor>() {
                     @Override
-                    public TypeParameterDescriptor apply(@Nullable TypeParameterDescriptor typeParameterDescriptor) {
-                        assert typeParameterDescriptor != null;
+                    public TypeParameterDescriptor invoke(TypeParameterDescriptor typeParameterDescriptor) {
                         return candidate.getTypeParameters().get(typeParameterDescriptor.getIndex());
                     }
                 });

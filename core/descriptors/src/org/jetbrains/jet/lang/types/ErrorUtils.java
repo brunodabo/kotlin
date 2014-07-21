@@ -446,6 +446,7 @@ public class ErrorUtils {
         });
     }
 
+    @NotNull
     public static UninferredParameterType createUninferredParameterType(@NotNull TypeParameterDescriptor typeParameterDescriptor) {
         return new UninferredParameterType(typeParameterDescriptor);
     }

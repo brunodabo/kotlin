@@ -680,6 +680,7 @@ public class TypeUtils {
         });
     }
 
+    @NotNull
     public static TypeSubstitutor makeSubstitutorForTypeParametersMap(
            @NotNull final Map<TypeParameterDescriptor, TypeProjection> substitutionContext
     ) {

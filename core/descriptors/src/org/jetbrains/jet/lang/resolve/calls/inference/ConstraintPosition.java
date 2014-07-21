@@ -34,6 +34,7 @@ public class ConstraintPosition {
     private static final Map<Integer, ConstraintPosition> valueParameterPositions = Maps.newHashMap();
     private static final Map<Integer, ConstraintPosition> typeBoundPositions = Maps.newHashMap();
 
+    @NotNull
     public static ConstraintPosition getValueParameterPosition(int index) {
         ConstraintPosition position = valueParameterPositions.get(index);
         if (position == null) {
@@ -43,6 +44,7 @@ public class ConstraintPosition {
         return position;
     }
 
+    @NotNull
     public static ConstraintPosition getTypeBoundPosition(int index) {
         ConstraintPosition position = typeBoundPositions.get(index);
         if (position == null) {
@@ -74,6 +76,7 @@ public class ConstraintPosition {
         }
     }
 
+    @NotNull
     public static ConstraintPosition getCompoundConstraintPosition(ConstraintPosition... positions) {
         return new CompoundConstraintPosition(Lists.newArrayList(positions));
     }

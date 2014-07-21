@@ -97,6 +97,9 @@ class KotlinCacheService(val project: Project) {
     }
 
     private fun getCacheForSyntheticFile(file: JetFile): KotlinResolveCache {
+        if (file.getName() == "dummy.kt") {
+            throw IllegalArgumentException("Should not analyze element created by JetPsiFactory")
+        }
         return synchronized(syntheticFileCaches) {
             syntheticFileCaches[file]
         }
@@ -108,9 +111,6 @@ class KotlinCacheService(val project: Project) {
 
     public fun getLazyResolveSession(element: JetElement): ResolveSessionForBodies {
         val file = element.getContainingJetFile()
-        if (file.getName() == "dummy.kt") {
-            throw IllegalArgumentException("Should not analyze element created by JetPsiFactory")
-        }
         if (!isFileInScope(file)) {
             return getCacheForSyntheticFile(file).getLazyResolveSession()
         }

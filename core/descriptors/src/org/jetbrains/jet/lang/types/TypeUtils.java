@@ -31,7 +31,6 @@ import org.jetbrains.jet.lang.descriptors.ClassifierDescriptor;
 import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
 import org.jetbrains.jet.lang.descriptors.TypeParameterDescriptor;
 import org.jetbrains.jet.lang.descriptors.annotations.Annotations;
-import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintPosition;
 import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystemImpl;
 import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstructor;
 import org.jetbrains.jet.lang.resolve.scopes.ChainedScope;
@@ -41,6 +40,8 @@ import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns;
 import org.jetbrains.jet.utils.DFS;
 
 import java.util.*;
+
+import static org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPositionKind.*;
 
 public class TypeUtils {
     public static final JetType DONT_CARE = ErrorUtils.createErrorTypeWithCustomDebugName("DONT_CARE");
@@ -257,7 +258,7 @@ public class TypeUtils {
             processAllTypeParameters(expected, Variance.INVARIANT, processor);
             ConstraintSystemImpl constraintSystem = new ConstraintSystemImpl();
             constraintSystem.registerTypeVariables(parameters);
-            constraintSystem.addSubtypeConstraint(withParameters, expected, ConstraintPosition.SPECIAL);
+            constraintSystem.addSubtypeConstraint(withParameters, expected, SPECIAL.position());
 
             return constraintSystem.getStatus().isSuccessful();
         }

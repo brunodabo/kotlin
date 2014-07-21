@@ -31,7 +31,10 @@ import org.jetbrains.jet.lang.resolve.BindingContextUtils;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
 import org.jetbrains.jet.lang.resolve.calls.CallResolver;
 import org.jetbrains.jet.lang.resolve.calls.autocasts.DataFlowInfo;
-import org.jetbrains.jet.lang.resolve.calls.inference.*;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystem;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystemStatus;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintsUtil;
+import org.jetbrains.jet.lang.resolve.calls.inference.InferenceErrorData;
 import org.jetbrains.jet.lang.resolve.calls.model.MutableDataFlowInfoForArguments;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.resolve.calls.results.OverloadResolutionResults;
@@ -47,6 +50,7 @@ import java.util.*;
 
 import static org.jetbrains.jet.lang.resolve.BindingContext.CALL;
 import static org.jetbrains.jet.lang.resolve.BindingContext.RESOLVED_CALL;
+import static org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPositionKind.EXPECTED_TYPE_POSITION;
 
 public class ControlStructureTypingUtils {
 
@@ -349,7 +353,7 @@ public class ControlStructureTypingUtils {
                     return;
                 }
                 JetExpression expression = (JetExpression) call.getCallElement();
-                if (status.hasOnlyErrorsFromPosition(ConstraintPosition.EXPECTED_TYPE_POSITION) || status.hasConflictingConstraints()) {
+                if (status.hasOnlyErrorsFromPosition(EXPECTED_TYPE_POSITION.position()) || status.hasConflictingConstraints()) {
                     expression.accept(checkTypeVisitor, new CheckTypeContext(trace, data.expectedType));
                     return;
                 }

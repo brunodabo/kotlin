@@ -26,7 +26,10 @@ import org.jetbrains.jet.lang.descriptors.ReceiverParameterDescriptor;
 import org.jetbrains.jet.lang.descriptors.ValueParameterDescriptor;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
-import org.jetbrains.jet.lang.resolve.calls.inference.*;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystem;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystemImpl;
+import org.jetbrains.jet.lang.resolve.calls.inference.ConstraintSystemStatus;
+import org.jetbrains.jet.lang.resolve.calls.inference.InferenceErrorData;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.resolve.scopes.receivers.ExpressionReceiver;
@@ -42,6 +45,7 @@ import java.util.List;
 
 import static org.jetbrains.jet.lang.diagnostics.Errors.*;
 import static org.jetbrains.jet.lang.resolve.BindingContext.AMBIGUOUS_REFERENCE_TARGET;
+import static org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPositionKind.EXPECTED_TYPE_POSITION;
 import static org.jetbrains.jet.lang.types.TypeUtils.noExpectedType;
 
 public abstract class AbstractTracingStrategy implements TracingStrategy {
@@ -188,12 +192,12 @@ public abstract class AbstractTracingStrategy implements TracingStrategy {
             // (it's useful, when the arguments, e.g. lambdas or calls are incomplete)
             return;
         }
-        if (status.hasOnlyErrorsFromPosition(ConstraintPosition.EXPECTED_TYPE_POSITION)) {
+        if (status.hasOnlyErrorsFromPosition(EXPECTED_TYPE_POSITION.position())) {
             JetType declaredReturnType = data.descriptor.getReturnType();
             if (declaredReturnType == null) return;
 
             ConstraintSystem systemWithoutExpectedTypeConstraint =
-                    ((ConstraintSystemImpl) constraintSystem).filterConstraintsOut(ConstraintPosition.EXPECTED_TYPE_POSITION);
+                    ((ConstraintSystemImpl) constraintSystem).filterConstraintsOut(EXPECTED_TYPE_POSITION.position());
             JetType substitutedReturnType = systemWithoutExpectedTypeConstraint.getResultingSubstitutor().substitute(declaredReturnType, Variance.INVARIANT);
             assert substitutedReturnType != null; //todo
 

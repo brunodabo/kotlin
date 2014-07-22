@@ -22,11 +22,8 @@ import org.jetbrains.jet.lang.resolve.lazy.ResolveSession
 import org.jetbrains.jet.analyzer.new.PlatformModuleParameters
 import org.jetbrains.jet.lang.descriptors.ModuleDescriptorBase
 import org.jetbrains.jet.analyzer.new.ResolverForProject
-import org.jetbrains.jet.lang.resolve.ImportPath
-import org.jetbrains.jet.lang.PlatformToKotlinClassMap
 import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM
 import org.jetbrains.jet.lang.resolve.java.mapping.JavaToKotlinClassMap
-import org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactory
 import org.jetbrains.jet.lang.resolve.lazy.declarations.DeclarationProviderFactoryService
 import org.jetbrains.jet.di.InjectorForModuleAwareLazyResolveWithJava
 import org.jetbrains.jet.lang.resolve.BindingTraceContext
@@ -36,7 +33,6 @@ import org.jetbrains.jet.lang.psi.JetFile
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.jet.lang.descriptors.impl.CompositePackageFragmentProvider
 import org.jetbrains.jet.lang.resolve.java.structure.JavaClass
-import org.jetbrains.jet.lang.resolve.java.lazy.ModuleClassResolver
 import org.jetbrains.jet.lang.descriptors.ModuleDescriptor
 import org.jetbrains.jet.lang.resolve.java.JavaDescriptorResolver
 import org.jetbrains.jet.lang.resolve.java.lazy.ModuleClassResolverImpl

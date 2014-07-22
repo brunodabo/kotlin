@@ -28,10 +28,11 @@ import org.jetbrains.jet.lang.diagnostics.Errors
 import org.jetbrains.jet.lang.psi.JetSimpleNameExpression
 import org.jetbrains.jet.lang.psi.JetUnaryExpression
 import org.jetbrains.jet.lang.psi.JetProperty
+import com.intellij.psi.PsiElement
 
-class AfterConversionPass(val project: Project) {
+class AfterConversionPass(val project: Project, val contextElement: PsiElement) {
     public fun run(kotlinCode: String): String {
-        val kotlinFile = JetPsiFactory(project).createFile(kotlinCode)
+        val kotlinFile = JetPsiFactory(project).createAnalyzableFile("fileForPerformingAnalysisOnOnConvertedCode.kt", kotlinCode, contextElement)
         val analyzeExhaust = AnalyzerFacadeForJVM.analyzeFilesWithJavaIntegration(
                 project,
                 listOf(kotlinFile),

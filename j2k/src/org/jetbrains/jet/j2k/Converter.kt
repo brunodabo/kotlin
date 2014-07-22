@@ -62,7 +62,7 @@ public class Converter private(val project: Project, val settings: ConverterSett
         val converted = convertTopElement(element) ?: return ""
         val builder = CodeBuilder(element)
         builder.append(converted)
-        return AfterConversionPass(project).run(builder.result)
+        return AfterConversionPass(project, element).run(builder.result)
     }
 
     private fun convertTopElement(element: PsiElement?): Element? = when (element) {

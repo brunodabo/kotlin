@@ -53,7 +53,7 @@ public class LazyResolveTestUtil {
                 globalContext.getStorageManager(), globalContext.getExceptionTracker(), Predicates.<PsiFile>alwaysTrue(), false, false);
         CliLightClassGenerationSupport support = CliLightClassGenerationSupport.getInstanceForCli(environment.getProject());
         BindingTrace sharedTrace = support.getTrace();
-        ModuleDescriptorImpl sharedModule = support.getModule();
+        ModuleDescriptorImpl sharedModule = (ModuleDescriptorImpl) support.getModule();
 
         InjectorForTopDownAnalyzerForJvm injector =
                 new InjectorForTopDownAnalyzerForJvm(environment.getProject(), params, sharedTrace, sharedModule);

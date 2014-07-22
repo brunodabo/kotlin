@@ -291,7 +291,7 @@ public class KotlinToJVMBytecodeCompiler {
                     public AnalyzeExhaust invoke() {
                         CliLightClassGenerationSupport support = CliLightClassGenerationSupport.getInstanceForCli(environment.getProject());
                         BindingTrace sharedTrace = support.getTrace();
-                        ModuleDescriptorImpl sharedModule = support.getModule();
+                        ModuleDescriptorImpl sharedModule = (ModuleDescriptorImpl) support.getModule();
 
                         IncrementalCacheProvider incrementalCacheProvider = IncrementalCacheProvider.object$.getInstance();
                         File incrementalCacheBaseDir = environment.getConfiguration().get(JVMConfigurationKeys.INCREMENTAL_CACHE_BASE_DIR);

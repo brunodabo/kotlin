@@ -35,10 +35,13 @@ import org.jetbrains.jet.asJava.LightClassConstructionContext;
 import org.jetbrains.jet.asJava.LightClassGenerationSupport;
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
 import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
+import org.jetbrains.jet.lang.descriptors.ModuleDescriptor;
 import org.jetbrains.jet.lang.descriptors.PackageViewDescriptor;
-import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.psi.*;
-import org.jetbrains.jet.lang.resolve.*;
+import org.jetbrains.jet.lang.resolve.BindingContext;
+import org.jetbrains.jet.lang.resolve.BindingTrace;
+import org.jetbrains.jet.lang.resolve.BindingTraceContext;
+import org.jetbrains.jet.lang.resolve.DescriptorToSourceUtils;
 import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM;
 import org.jetbrains.jet.lang.resolve.java.JvmAbi;
 import org.jetbrains.jet.lang.resolve.name.FqName;
@@ -67,7 +70,7 @@ public class CliLightClassGenerationSupport extends LightClassGenerationSupport 
     }
 
     private BindingTrace trace;
-    private ModuleDescriptorImpl module;
+    private ModuleDescriptor module;
 
     public CliLightClassGenerationSupport() {
     }
@@ -81,7 +84,7 @@ public class CliLightClassGenerationSupport extends LightClassGenerationSupport 
     }
 
     @NotNull
-    public ModuleDescriptorImpl getModule() {
+    public ModuleDescriptor getModule() {
         if (module == null) {
             module = AnalyzerFacadeForJVM.createJavaModule("<module>");
         }
@@ -89,7 +92,7 @@ public class CliLightClassGenerationSupport extends LightClassGenerationSupport 
     }
 
     @TestOnly
-    public void setModule(@NotNull ModuleDescriptorImpl module) {
+    public void setModule(@NotNull ModuleDescriptor module) {
         assert this.module == null : "module already configured: " + module;
         this.module = module;
     }

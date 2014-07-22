@@ -158,7 +158,7 @@ public abstract class AbstractLoadJavaTest extends TestCaseWithTmpdir {
         // we need the same binding trace for resolve from Java and Kotlin
         CliLightClassGenerationSupport support = CliLightClassGenerationSupport.getInstanceForCli(environment.getProject());
         BindingTrace trace = support.getTrace();
-        ModuleDescriptorImpl module = support.getModule();
+        ModuleDescriptorImpl module = (ModuleDescriptorImpl) support.getModule();
 
         TopDownAnalysisParameters parameters = TopDownAnalysisParameters.create(
                 new LockBasedStorageManager(),

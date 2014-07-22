@@ -85,7 +85,7 @@ public abstract class AbstractJetDiagnosticsTest extends BaseDiagnosticsTest {
                     jetFiles,
                     moduleTrace,
                     Predicates.<PsiFile>alwaysTrue(),
-                    module == null ? support.getModule() : module,
+                    module == null ? (ModuleDescriptorImpl) support.getModule() : module,
                     null,
                     null
             );

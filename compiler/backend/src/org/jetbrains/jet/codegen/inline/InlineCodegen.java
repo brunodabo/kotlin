@@ -46,19 +46,17 @@ import org.jetbrains.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.org.objectweb.asm.Opcodes;
 import org.jetbrains.org.objectweb.asm.Type;
 import org.jetbrains.org.objectweb.asm.commons.Method;
-import org.jetbrains.org.objectweb.asm.tree.MethodNode;
+import org.jetbrains.org.objectweb.asm.tree.*;
 import org.jetbrains.org.objectweb.asm.util.Textifier;
 import org.jetbrains.org.objectweb.asm.util.TraceMethodVisitor;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
+import java.util.*;
 
 import static org.jetbrains.jet.codegen.AsmUtil.*;
+import static org.jetbrains.jet.codegen.inline.InlineCodegenUtil.createEmptyMethodNode;
 
 public class InlineCodegen implements CallGenerator {
     private final GenerationState state;
@@ -243,6 +241,7 @@ public class InlineCodegen implements CallGenerator {
             }
         };
         List<MethodInliner.FinallyBlockInfo> infos = MethodInliner.processReturns(adapter, labelOwner, true, null);
+
         generateAndInsertFinallyBlocks(adapter, infos);
 
         adapter.accept(new InliningInstructionAdapter(codegen.v));

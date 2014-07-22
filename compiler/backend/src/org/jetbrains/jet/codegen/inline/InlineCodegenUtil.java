@@ -299,12 +299,12 @@ public class InlineCodegenUtil {
         }
     }
 
-    public static void insertNodeBefore(@NotNull MethodNode from, @NotNull MethodNode to, @NotNull AbstractInsnNode afterNode) {
+    public static void insertNodeBefore(@NotNull MethodNode from, @NotNull MethodNode to, @NotNull AbstractInsnNode beforeNode) {
         InsnList instructions = to.instructions;
         ListIterator<AbstractInsnNode> iterator = from.instructions.iterator();
         while (iterator.hasNext()) {
             AbstractInsnNode next = iterator.next();
-            instructions.insertBefore(afterNode, next);
+            instructions.insertBefore(beforeNode, next);
         }
     }
 

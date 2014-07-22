@@ -34,9 +34,7 @@ import org.jetbrains.org.objectweb.asm.tree.analysis.*;
 
 import java.util.*;
 
-import static org.jetbrains.jet.codegen.inline.InlineCodegenUtil.getReturnType;
-import static org.jetbrains.jet.codegen.inline.InlineCodegenUtil.isAnonymousConstructorCall;
-import static org.jetbrains.jet.codegen.inline.InlineCodegenUtil.isInvokeOnLambda;
+import static org.jetbrains.jet.codegen.inline.InlineCodegenUtil.*;
 
 public class MethodInliner {
 
@@ -62,6 +60,8 @@ public class MethodInliner {
     private final Map<String, String> currentTypeMapping = new HashMap<String, String>();
 
     private final InlineResult result;
+
+    private int lambdasFinallyBlocks;
 
     /*
      *
@@ -117,6 +117,9 @@ public class MethodInliner {
         resultNode.visitLabel(end);
         processReturns(resultNode, labelOwner, remapReturn, end);
 
+        if (inliningContext.isRoot()) {
+            processInlineFunFinallyBlocks(resultNode);
+        }
         //flush transformed node to output
         resultNode.accept(new InliningInstructionAdapter(adapter));
 
@@ -127,7 +130,7 @@ public class MethodInliner {
 
         final Deque<InvokeCall> currentInvokes = new LinkedList<InvokeCall>(invokeCalls);
 
-        MethodNode resultNode = new MethodNode(node.access, node.name, node.desc, node.signature, null);
+        final MethodNode resultNode = new MethodNode(node.access, node.name, node.desc, node.signature, null);
 
         final Iterator<ConstructorInvocation> iterator = constructorInvocations.iterator();
 
@@ -225,6 +228,12 @@ public class MethodInliner {
                 else {
                     super.visitMethodInsn(opcode, changeOwnerForExternalPackage(owner, opcode), name, desc, itf);
                 }
+            }
+
+            @Override
+            public void visitMaxs(int stack, int locals) {
+                lambdasFinallyBlocks = resultNode.tryCatchBlocks.size();
+                super.visitMaxs(stack, locals);
             }
 
         };
@@ -549,6 +558,7 @@ public class MethodInliner {
     }
 
     @NotNull
+    //process local and global returns (local substituted with goto end-label gloabal keeped unchanged)
     public static List<FinallyBlockInfo> processReturns(@NotNull MethodNode node, @NotNull LabelOwner labelOwner, boolean remapReturn, Label endLabel) {
         if (!remapReturn) {
             return Collections.emptyList();
@@ -584,7 +594,8 @@ public class MethodInliner {
                 }
 
                 //genetate finally block before nonLocalReturn flag/return/goto
-                result.add(new FinallyBlockInfo(isLocalReturn ? insnNode : insnNode.getPrevious(), getReturnType(insnNode.getOpcode())));
+                result.add(new FinallyBlockInfo(isLocalReturn ? insnNode : insnNode.getPrevious(), getReturnType(insnNode.getOpcode()),
+                                                isLocalReturn));
             }
             insnNode = insnNode.getNext();
         }
@@ -597,10 +608,64 @@ public class MethodInliner {
 
         final Type returnType;
 
-        public FinallyBlockInfo(AbstractInsnNode beforeIns, Type returnType) {
+        final boolean isLocal;
+
+        public FinallyBlockInfo(AbstractInsnNode beforeIns, Type returnType, boolean isLocalReturn) {
             this.beforeIns = beforeIns;
             this.returnType = returnType;
+            this.isLocal = isLocalReturn;
         }
 
+    }
+
+    private void processInlineFunFinallyBlocks(@NotNull MethodNode inlineFun) {
+        Map<LabelNode, TryCatchBlockNode> starts = new HashMap<LabelNode, TryCatchBlockNode>();
+        Map<LabelNode, TryCatchBlockNode> ends = new HashMap<LabelNode, TryCatchBlockNode>();
+        List<TryCatchBlockNode> tryCatchBlocks = inlineFun.tryCatchBlocks.subList(lambdasFinallyBlocks, inlineFun.tryCatchBlocks.size());
+
+        for (TryCatchBlockNode block : tryCatchBlocks) {
+            /*assert null == */starts.put(block.start, block);
+            /*assert null == */ends.put(block.end, block);
+        }
+
+        Stack<TryCatchBlockNode> tryBlockStack = new Stack<TryCatchBlockNode>();
+        InsnList instructions = inlineFun.instructions;
+        AbstractInsnNode prev = instructions.getLast();
+        while (prev != null) {
+            if (ends.containsKey(prev)) {
+                tryBlockStack.push(ends.get(prev));
+            }
+            if (starts.containsKey(prev)) {
+                TryCatchBlockNode pop = tryBlockStack.pop();
+                assert prev == starts.get(prev).start : "Wrong try-catch structure";
+            }
+                if (InlineCodegenUtil.isReturnOpcode(prev.getOpcode())) {
+                    //at this point only global return is possible //local one already substituted with goto end
+                    AbstractInsnNode globalFlag = prev.getPrevious();
+                    AbstractInsnNode insertBefore = globalFlag instanceof MethodInsnNode && InlineCodegenUtil.NON_LOCAL_RETURN.equals(((MethodInsnNode)globalFlag).owner) ? globalFlag : prev;
+
+                    AbstractInsnNode nextPrev = insertBefore.getPrevious();
+                    MethodInliner.FinallyBlockInfo info = new MethodInliner.FinallyBlockInfo(insertBefore, InlineCodegenUtil.getReturnType(prev.getOpcode()), false);
+
+                    ListIterator<TryCatchBlockNode> finallyIterator = tryBlockStack.listIterator(tryBlockStack.size());
+                    while (finallyIterator.hasPrevious()) {
+                        TryCatchBlockNode finallyBlock = finallyIterator.previous();
+                        MethodNode nodeWithFinallyCopy = createEmptyMethodNode();
+                        //instructions.resetLabels();
+                        AbstractInsnNode currentNode = finallyBlock.start;
+                        do {
+                            currentNode.accept(nodeWithFinallyCopy);
+                            currentNode = currentNode.getNext();
+                        }
+                        while (currentNode != finallyBlock.end);
+                        //instructions.resetLabels();
+                        nodeWithFinallyCopy.instructions.resetLabels();
+                        InlineCodegenUtil.insertNodeBefore(nodeWithFinallyCopy, inlineFun, insertBefore);
+                    }
+                    prev = nextPrev;
+                    continue;
+                }
+            prev = prev.getPrevious();
+        }
     }
 }

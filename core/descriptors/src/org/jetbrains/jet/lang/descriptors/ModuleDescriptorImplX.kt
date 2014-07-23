@@ -25,6 +25,12 @@ import kotlin.properties.Delegates
 
 public class ModuleDescriptorImplX(name: Name, defaultImports: List<ImportPath>, platformToKotlinClassMap: PlatformToKotlinClassMap) :
         ModuleDescriptorBase(name, defaultImports, platformToKotlinClassMap) {
+    {
+        if (!name.isSpecial()) {
+            throw IllegalArgumentException("module name must be special: $name")
+        }
+    }
+
     private val dependencies: MutableList<ModuleDescriptorImplX> = ArrayList()
 
     public var ownPackageFragmentProvider: PackageFragmentProvider by Delegates.notNull()

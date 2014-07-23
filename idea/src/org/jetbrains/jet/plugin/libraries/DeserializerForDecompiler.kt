@@ -55,8 +55,9 @@ public fun DeserializerForDecompiler(classFile: VirtualFile): DeserializerForDec
 
 public class DeserializerForDecompiler(val packageDirectory: VirtualFile, val directoryPackageFqName: FqName) : ResolverForDecompiler {
 
-    private val moduleDescriptor =
-            ModuleDescriptorImpl(Name.special("<module for building decompiled sources>"), listOf(), PlatformToKotlinClassMap.EMPTY)
+    private val moduleDescriptor = createDummyModule("module for building decompiled sources")
+
+    private fun createDummyModule(name: String) = ModuleDescriptorImplX(Name.special("<$name>"), listOf(), PlatformToKotlinClassMap.EMPTY)
 
     override fun resolveTopLevelClass(classFqName: FqName) = deserializationContext.classDeserializer.deserializeClass(classFqName.toClassId())
 
@@ -140,11 +141,16 @@ public class DeserializerForDecompiler(val packageDirectory: VirtualFile, val di
     }
 
     {
-        moduleDescriptor.addFragmentProvider(DependencyKind.BUILT_INS,
-                                             KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider())
-        moduleDescriptor.addFragmentProvider(DependencyKind.SOURCES, packageFragmentProvider)
-        moduleDescriptor.addFragmentProvider(DependencyKind.BINARIES, PackageFragmentProviderForMissingDependencies(moduleDescriptor))
+        moduleDescriptor.setPackageFragmentProviderForSources(packageFragmentProvider)
+        moduleDescriptor.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+        moduleDescriptor.addDependencyOnModule(moduleDescriptor)
+        val moduleWithMissingDependencies = createDummyModule("module with missing dependencies for decompiled sources")
+        moduleWithMissingDependencies.setPackageFragmentProviderForSources(
+                PackageFragmentProviderForMissingDependencies(moduleWithMissingDependencies)
+        )
+        moduleDescriptor.addDependencyOnModule(moduleWithMissingDependencies)
     }
+
     val deserializationContext = DeserializationGlobalContext(storageManager, moduleDescriptor, classDataFinder, annotationLoader,
                                                               constantLoader, packageFragmentProvider)
 

@@ -130,32 +130,6 @@ public final class AnalyzerFacadeForJS {
     }
 
     @NotNull
-    public static ResolveSession getLazyResolveSession(
-            @NotNull Collection<JetFile> syntheticFiles,
-            @NotNull GlobalSearchScope filesScope,
-            @NotNull Config config
-    ) {
-        GlobalContextImpl globalContext = ContextPackage.GlobalContext();
-        DeclarationProviderFactory declarationProviderFactory = DeclarationProviderFactoryService.object$
-                .createDeclarationProviderFactory(
-                        config.getProject(),
-                        globalContext.getStorageManager(),
-                        //TODO: lib files are not really synthetic
-                        Config.withJsLibAdded(syntheticFiles, config),
-                        filesScope
-                );
-        ModuleDescriptorImpl module = createJsModule("<lazy module>");
-        module.addFragmentProvider(DependencyKind.BUILT_INS, KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider());
-
-        return new InjectorForLazyResolve(
-                config.getProject(),
-                globalContext,
-                module,
-                declarationProviderFactory,
-                new BindingTraceContext()).getResolveSession();
-    }
-
-    @NotNull
     private static ModuleDescriptorImpl createJsModule(@NotNull String name) {
         return new ModuleDescriptorImpl(Name.special(name), DEFAULT_IMPORTS, PlatformToKotlinClassMap.EMPTY);
     }

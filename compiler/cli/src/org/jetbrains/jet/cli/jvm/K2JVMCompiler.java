@@ -19,7 +19,6 @@ package org.jetbrains.jet.cli.jvm;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.cli.common.CLICompiler;
 import org.jetbrains.jet.cli.common.CLIConfigurationKeys;
@@ -44,7 +43,6 @@ import org.jetbrains.jet.utils.KotlinPathsFromHomeDir;
 import org.jetbrains.jet.utils.PathUtil;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -86,7 +84,6 @@ public class K2JVMCompiler extends CLICompiler<K2JVMCompilerArguments> {
 
         if (!arguments.script &&
             arguments.module == null &&
-            arguments.src == null &&
             arguments.freeArgs.isEmpty() &&
             !arguments.version
         ) {
@@ -99,19 +96,12 @@ public class K2JVMCompiler extends CLICompiler<K2JVMCompilerArguments> {
             configuration.add(CommonConfigurationKeys.SOURCE_ROOTS_KEY, arguments.freeArgs.get(0));
         }
         else {
-            if (arguments.src != null) {
-                List<String> sourcePathsSplitByPathSeparator
-                        = Arrays.asList(arguments.src.split(StringUtil.escapeToRegexp(File.pathSeparator)));
-                configuration.addAll(CommonConfigurationKeys.SOURCE_ROOTS_KEY, sourcePathsSplitByPathSeparator);
-            }
-            for (String freeArg : arguments.freeArgs) {
-                configuration.add(CommonConfigurationKeys.SOURCE_ROOTS_KEY, freeArg);
-            }
+            configuration.addAll(CommonConfigurationKeys.SOURCE_ROOTS_KEY, arguments.freeArgs);
         }
 
         configuration.put(JVMConfigurationKeys.SCRIPT_PARAMETERS, arguments.script
-                                                                          ? CommandLineScriptUtils.scriptParameters()
-                                                                          : Collections.<AnalyzerScriptParameter>emptyList());
+                                                                  ? CommandLineScriptUtils.scriptParameters()
+                                                                  : Collections.<AnalyzerScriptParameter>emptyList());
 
         configuration.put(JVMConfigurationKeys.GENERATE_NOT_NULL_ASSERTIONS, arguments.notNullAssertions);
         configuration.put(JVMConfigurationKeys.GENERATE_NOT_NULL_PARAMETER_ASSERTIONS, arguments.notNullParamAssertions);
@@ -127,8 +117,19 @@ public class K2JVMCompiler extends CLICompiler<K2JVMCompilerArguments> {
         try {
             configureEnvironment(configuration, arguments);
 
-            File jar = arguments.jar != null ? new File(arguments.jar) : null;
-            File outputDir = arguments.outputDir != null ? new File(arguments.outputDir) : null;
+            String destination = arguments.destination;
+
+            File jar;
+            File outputDir;
+            if (destination != null) {
+                boolean isJar = destination.endsWith(".jar");
+                jar = isJar ? new File(destination) : null;
+                outputDir = isJar ? null : new File(destination);
+            }
+            else {
+                jar = arguments.jar != null ? new File(arguments.jar) : null;
+                outputDir = arguments.outputDir != null ? new File(arguments.outputDir) : null;
+            }
 
             if (arguments.module != null) {
                 MessageCollector sanitizedCollector = new FilteringMessageCollector(messageCollector, in(CompilerMessageSeverity.VERBOSE));
@@ -139,14 +140,15 @@ public class K2JVMCompiler extends CLICompiler<K2JVMCompilerArguments> {
                 }
 
                 if (outputDir != null) {
-                    messageCollector.report(CompilerMessageSeverity.WARNING, "The '-output' option is ignored because '-module' is specified",
+                    messageCollector.report(CompilerMessageSeverity.WARNING,
+                                            "The '-d' option with a directory destination is ignored because '-module' is specified",
                                             CompilerMessageLocation.NO_LOCATION);
                 }
 
                 File directory = new File(arguments.module).getAbsoluteFile().getParentFile();
-                KotlinToJVMBytecodeCompiler.compileModules(configuration, moduleScript.getModules(),
-                                                                      directory, jar,
-                                                                      arguments.includeRuntime);
+                KotlinToJVMBytecodeCompiler.compileModules(
+                        configuration, moduleScript.getModules(), directory, jar, arguments.includeRuntime
+                );
             }
             else if (arguments.script) {
                 List<String> scriptArgs = arguments.freeArgs.subList(1, arguments.freeArgs.size());

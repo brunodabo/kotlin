@@ -20,6 +20,7 @@ import org.jetbrains.jet.lang.types.Variance
 import org.jetbrains.jet.lang.descriptors.TypeParameterDescriptor
 import org.jetbrains.jet.lang.types.JetType
 import org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPosition
+import org.jetbrains.jet.lang.types.TypeProjection
 
 public trait TypeBounds {
     public val varianceOfPosition: Variance
@@ -28,11 +29,13 @@ public trait TypeBounds {
 
     public val bounds: Collection<Bound>
 
+    public val capturedBounds: Collection<CapturedBound>
+
     public fun isEmpty(): Boolean
 
-    public fun getValue(): JetType?
+    public fun getValue(): TypeProjection?
 
-    public fun getValues(): Collection<JetType>
+    public fun getValues(): Collection<TypeProjection>
 
     public enum class BoundKind {
         LOWER_BOUND
@@ -41,4 +44,6 @@ public trait TypeBounds {
     }
 
     public class Bound(public val constrainingType: JetType, public val kind: BoundKind, public val position: ConstraintPosition)
+
+    public class CapturedBound(public val typeProjection: TypeProjection, public val position: ConstraintPosition)
 }

@@ -34,10 +34,7 @@ import org.jetbrains.jet.lang.resolve.calls.inference.*;
 import org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPosition;
 import org.jetbrains.jet.lang.resolve.calls.model.ResolvedCall;
 import org.jetbrains.jet.lang.resolve.name.Name;
-import org.jetbrains.jet.lang.types.JetType;
-import org.jetbrains.jet.lang.types.TypeSubstitutor;
-import org.jetbrains.jet.lang.types.TypeUtils;
-import org.jetbrains.jet.lang.types.Variance;
+import org.jetbrains.jet.lang.types.*;
 import org.jetbrains.jet.lang.types.checker.JetTypeChecker;
 import org.jetbrains.jet.renderer.DescriptorRenderer;
 import org.jetbrains.jet.renderer.Renderer;
@@ -320,7 +317,7 @@ public class Renderers {
             return result;
         }
 
-        JetType inferredValueForTypeParameter = systemWithoutWeakConstraints.getTypeBounds(typeParameterDescriptor).getValue();
+        TypeProjection inferredValueForTypeParameter = systemWithoutWeakConstraints.getTypeBounds(typeParameterDescriptor).getValue();
         if (inferredValueForTypeParameter == null) {
             LOG.error(renderDebugMessage("System without weak constraints is not successful, there is no value for type parameter " +
                                          typeParameterDescriptor.getName() + "\n: " + systemWithoutWeakConstraints, inferenceErrorData));
@@ -336,7 +333,7 @@ public class Renderers {
             JetType upperBoundWithSubstitutedInferredTypes =
                     systemWithoutWeakConstraints.getResultingSubstitutor().substitute(upperBound, Variance.INVARIANT);
             if (upperBoundWithSubstitutedInferredTypes != null &&
-                !JetTypeChecker.DEFAULT.isSubtypeOf(inferredValueForTypeParameter, upperBoundWithSubstitutedInferredTypes)) {
+                !JetTypeChecker.DEFAULT.isSubtypeOf(inferredValueForTypeParameter.getType(), upperBoundWithSubstitutedInferredTypes)) {
                 violatedUpperBound = upperBoundWithSubstitutedInferredTypes;
                 break;
             }
@@ -350,7 +347,7 @@ public class Renderers {
         Renderer<JetType> typeRenderer = result.getTypeRenderer();
         result.text(newText()
                             .normal(" is not satisfied: inferred type ")
-                            .error(typeRenderer.render(inferredValueForTypeParameter))
+                            .error(typeRenderer.render(inferredValueForTypeParameter.getType()))
                             .normal(" is not a subtype of ")
                             .strong(typeRenderer.render(violatedUpperBound)));
         return result;
@@ -419,6 +416,7 @@ public class Renderers {
             if (typeBounds.isEmpty()) {
                 return typeVariableName.asString();
             }
+            //todo render captured bounds
             return typeVariableName + " " + StringUtil.join(typeBounds.getBounds(), renderBound, ", ");
         }
     };

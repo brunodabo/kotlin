@@ -45,21 +45,20 @@ public class ConstraintsUtil {
         TypeParameterDescriptor firstConflictingParameter = getFirstConflictingParameter(constraintSystem);
         if (firstConflictingParameter == null) return Collections.emptyList();
 
-        Collection<JetType> conflictingTypes = constraintSystem.getTypeBounds(firstConflictingParameter).getValues();
+        Collection<TypeProjection> conflictingTypes = constraintSystem.getTypeBounds(firstConflictingParameter).getValues();
 
-        ArrayList<Map<TypeConstructor, TypeProjection>> substitutionContexts = Lists.newArrayList();
-        for (JetType type : conflictingTypes) {
+        List<Map<TypeConstructor, TypeProjection>> substitutionContexts = Lists.newArrayList();
+        for (TypeProjection typeProjection : conflictingTypes) {
             Map<TypeConstructor, TypeProjection> context = Maps.newLinkedHashMap();
-            context.put(firstConflictingParameter.getTypeConstructor(), new TypeProjectionImpl(type));
+            context.put(firstConflictingParameter.getTypeConstructor(), typeProjection);
             substitutionContexts.add(context);
         }
 
         for (TypeParameterDescriptor typeParameter : constraintSystem.getTypeVariables()) {
             if (typeParameter == firstConflictingParameter) continue;
 
-            JetType safeType = getSafeValue(constraintSystem, typeParameter);
+            TypeProjection typeProjection = getSafeValue(constraintSystem, typeParameter);
             for (Map<TypeConstructor, TypeProjection> context : substitutionContexts) {
-                TypeProjection typeProjection = new TypeProjectionImpl(safeType);
                 context.put(typeParameter.getTypeConstructor(), typeProjection);
             }
         }
@@ -71,13 +70,13 @@ public class ConstraintsUtil {
     }
 
     @NotNull
-    public static JetType getSafeValue(@NotNull ConstraintSystem constraintSystem, @NotNull TypeParameterDescriptor typeParameter) {
-        JetType type = constraintSystem.getTypeBounds(typeParameter).getValue();
-        if (type != null) {
-            return type;
+    public static TypeProjection getSafeValue(@NotNull ConstraintSystem constraintSystem, @NotNull TypeParameterDescriptor typeParameter) {
+        TypeProjection typeProjection = constraintSystem.getTypeBounds(typeParameter).getValue();
+        if (typeProjection != null) {
+            return typeProjection;
         }
         //todo may be error type
-        return typeParameter.getUpperBoundsAsType();
+        return new TypeProjectionImpl(typeParameter.getUpperBoundsAsType());
     }
 
     public static boolean checkUpperBoundIsSatisfied(
@@ -85,8 +84,9 @@ public class ConstraintsUtil {
             @NotNull TypeParameterDescriptor typeParameter,
             boolean substituteOtherTypeParametersInBound
     ) {
-        JetType type = constraintSystem.getTypeBounds(typeParameter).getValue();
-        if (type == null) return true;
+        TypeProjection typeProjection = constraintSystem.getTypeBounds(typeParameter).getValue();
+        if (typeProjection == null) return true;
+        JetType type = typeProjection.getType();
         for (JetType upperBound : typeParameter.getUpperBounds()) {
             if (!substituteOtherTypeParametersInBound && TypeUtils.dependsOnTypeParameters(upperBound, constraintSystem.getTypeVariables())) {
                 continue;

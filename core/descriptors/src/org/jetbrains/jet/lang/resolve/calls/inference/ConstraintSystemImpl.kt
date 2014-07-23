@@ -109,8 +109,8 @@ public class ConstraintSystemImpl : ConstraintSystem {
         for ((typeParameter, typeBounds) in typeParameterBounds) {
             val typeProjection: TypeProjection
             val value = typeBounds.getValue()
-            if (value != null && !TypeUtils.containsSpecialType(value, DONT_CARE)) {
-                typeProjection = TypeProjectionImpl(value)
+            if (value != null && !TypeUtils.containsSpecialType(value.getType(), DONT_CARE)) {
+                typeProjection = value
             }
             else {
                 typeProjection = getDefaultTypeProjection.invoke(typeParameter)
@@ -223,6 +223,14 @@ public class ConstraintSystemImpl : ConstraintSystem {
                 return true
             }
 
+            override fun capture(typeVariable: JetType, typeProjection: TypeProjection): Boolean {
+                if (isMyTypeVariable(typeVariable) && constraintPosition.fromExpression()) {
+                    generateTypeParameterCaptureConstraint(typeVariable, typeProjection, constraintPosition)
+                    return true
+                }
+                return false
+            }
+
             override fun noCorrespondingSupertype(subtype: JetType, supertype: JetType): Boolean {
                 errorConstraintPositions.add(constraintPosition)
                 return true
@@ -301,9 +309,16 @@ public class ConstraintSystemImpl : ConstraintSystem {
                 generateTypeParameterConstraint(superType, subType, boundKind, constraintPosition)
                 return
             }
-            // if superType is nullable and subType is not nullable, unsafe call error will be generated later,
+            // if superType is nullable and subType is not nullable, unsafe call or type mismatch error will be generated later,
             // but constraint system should be solved anyway
-            typeCheckingProcedure.isSubtypeOf(TypeUtils.makeNotNullable(subType), TypeUtils.makeNotNullable(superType))
+            val subTypeNotNull = TypeUtils.makeNotNullable(subType)
+            val superTypeNotNull = TypeUtils.makeNotNullable(superType)
+            if (constraintKind == EQUAL) {
+                typeCheckingProcedure.equalTypes(subTypeNotNull, superTypeNotNull) //todo (?)
+            }
+            else {
+                typeCheckingProcedure.isSubtypeOf(subTypeNotNull, superTypeNotNull)
+            }
         }
         simplifyConstraint(newSubType, superType)
     }
@@ -331,6 +346,15 @@ public class ConstraintSystemImpl : ConstraintSystem {
         if (boundKind == EXACT_BOUND || boundKind == UPPER_BOUND) {
             typeBounds.addBound(UPPER_BOUND, constrainingType, constraintPosition)
         }
+    }
+
+    private fun generateTypeParameterCaptureConstraint(
+            parameterType: JetType,
+            constrainingTypeProjection: TypeProjection,
+            constraintPosition: ConstraintPosition
+    ) {
+        val typeBounds = getTypeBounds(parameterType)
+        typeBounds.addCapturedBound(constrainingTypeProjection, constraintPosition);
     }
 
     public fun processDeclaredBoundConstraints() {

@@ -31,6 +31,10 @@ import org.jetbrains.jet.lang.resolve.constants.IntegerValueTypeConstructor
 import java.util.LinkedHashSet
 import org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.BoundKind.*
 import org.jetbrains.jet.lang.resolve.calls.inference.constraintPosition.ConstraintPosition
+import org.jetbrains.jet.lang.types.TypeProjection
+import org.jetbrains.jet.lang.resolve.calls.inference.TypeBounds.CapturedBound
+import org.jetbrains.jet.lang.types.TypeProjectionImpl
+import java.util.ArrayList
 
 public class TypeBoundsImpl(
         override val typeVariable: TypeParameterDescriptor,
@@ -38,11 +42,18 @@ public class TypeBoundsImpl(
 ) : TypeBounds {
     override val bounds = LinkedHashSet<Bound>()
 
-    private var resultValues: Collection<JetType>? = null
+    override val capturedBounds = LinkedHashSet<CapturedBound>()
+
+    private var resultValues: Collection<TypeProjection>? = null
 
     public fun addBound(kind: BoundKind, constrainingType: JetType, position: ConstraintPosition) {
         resultValues = null
         bounds.add(Bound(constrainingType, kind, position))
+    }
+
+    public fun addCapturedBound(typeProjection: TypeProjection, position: ConstraintPosition) {
+        resultValues = null
+        capturedBounds.add(CapturedBound(typeProjection, position))
     }
 
     override fun isEmpty(): Boolean {
@@ -71,6 +82,7 @@ public class TypeBoundsImpl(
     fun copy(): TypeBoundsImpl {
         val typeBounds = TypeBoundsImpl(typeVariable, varianceOfPosition)
         typeBounds.bounds.addAll(bounds)
+        typeBounds.capturedBounds.addAll(capturedBounds)
         typeBounds.resultValues = resultValues
         return typeBounds
     }
@@ -78,10 +90,11 @@ public class TypeBoundsImpl(
     public fun filter(condition: (ConstraintPosition) -> Boolean): TypeBoundsImpl {
         val result = TypeBoundsImpl(typeVariable, varianceOfPosition)
         result.bounds.addAll(bounds.filter { condition(it.position) })
+        result.capturedBounds.addAll(capturedBounds.filter { condition(it.position) })
         return result
     }
 
-    override fun getValue(): JetType? {
+    override fun getValue(): TypeProjection? {
         val values = getValues()
         if (values.size() == 1) {
             return values.iterator().next()
@@ -89,14 +102,42 @@ public class TypeBoundsImpl(
         return null
     }
 
-    override fun getValues(): Collection<JetType> {
+    override fun getValues(): Collection<TypeProjection> {
         if (resultValues == null) {
             resultValues = computeValues()
         }
         return resultValues!!
     }
 
-    private fun computeValues(): Collection<JetType> {
+    private fun computeValues(): Collection<TypeProjection> {
+        val valuesFromBounds = computeValuesFromBounds()
+        if (capturedBounds.isEmpty()) {
+            return valuesFromBounds.map { TypeProjectionImpl(it) }
+        }
+        if (capturedBounds.size() == 1 && tryCapturedBound()) {
+            //todo!!!
+            return capturedBounds.map { it.typeProjection }
+        }
+
+        val result = ArrayList<TypeProjection>()
+        result.addAll(capturedBounds.map { it.typeProjection })
+        result.addAll(valuesFromBounds.map { TypeProjectionImpl(it) })
+        return result
+    }
+
+    private fun tryCapturedBound(): Boolean {
+        if (bounds.any { it.position.fromExpression() }) return false
+
+        val capturedBound = capturedBounds.iterator().next()
+
+        //todo
+        if (tryPossibleAnswer(capturedBound.typeProjection.getType(), forCapturedBound = true)) {
+            return true
+        }
+        return false
+    }
+
+    private fun computeValuesFromBounds(): Collection<JetType> {
         val values = LinkedHashSet<JetType>()
         if (bounds.isEmpty()) {
             return listOf()
@@ -154,9 +195,10 @@ public class TypeBoundsImpl(
         return values
     }
 
-    private fun tryPossibleAnswer(possibleAnswer: JetType?): Boolean {
+    private fun tryPossibleAnswer(possibleAnswer: JetType?, forCapturedBound: Boolean = false): Boolean {
         if (possibleAnswer == null) return false
         if (!possibleAnswer.getConstructor().isDenotable()) return false
+        if (!forCapturedBound && !capturedBounds.isEmpty()) return false
 
         for (bound in bounds) {
             when (bound.kind) {

@@ -83,7 +83,7 @@ public class CallResolverUtil {
         if (returnType == null) return false;
 
         for (TypeParameterDescriptor typeVariable : constraintSystem.getTypeVariables()) {
-            JetType inferredValueForTypeVariable = constraintSystem.getTypeBounds(typeVariable).getValue();
+            TypeProjection inferredValueForTypeVariable = constraintSystem.getTypeBounds(typeVariable).getValue();
             if (inferredValueForTypeVariable == null) {
                 if (TypeUtils.dependsOnTypeParameters(returnType, Collections.singleton(typeVariable))) {
                     return true;

@@ -31,18 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 public class ModuleDescriptorImpl extends ModuleDescriptorBase {
-    public static final ModuleFactory<ModuleDescriptorImpl> FACTORY = new ModuleFactory<ModuleDescriptorImpl>() {
-        @NotNull
-        @Override
-        public ModuleDescriptorImpl createModule(
-                @NotNull Name name,
-                @NotNull List<? extends ImportPath> defaultImports,
-                @NotNull PlatformToKotlinClassMap classMap
-        ) {
-            return new ModuleDescriptorImpl(name, (List<ImportPath>) defaultImports, classMap);
-        }
-    };
-
     private static final Logger LOG = Logger.getInstance(ModuleDescriptorImpl.class);
 
     private final List<PackageFragmentProvider> fragmentProviders = Lists.newArrayList();

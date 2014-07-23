@@ -42,16 +42,18 @@ import org.jetbrains.jet.codegen.KotlinCodegenFacade;
 import org.jetbrains.jet.codegen.state.GenerationState;
 import org.jetbrains.jet.config.CompilerConfiguration;
 import org.jetbrains.jet.di.InjectorForTopDownAnalyzerForJvm;
+import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX;
 import org.jetbrains.jet.lang.descriptors.ScriptDescriptor;
-import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
+import org.jetbrains.jet.lang.descriptors.impl.CompositePackageFragmentProvider;
 import org.jetbrains.jet.lang.descriptors.impl.PackageLikeBuilderDummy;
 import org.jetbrains.jet.lang.parsing.JetParserDefinition;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.psi.JetScript;
 import org.jetbrains.jet.lang.resolve.*;
-import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM;
+import org.jetbrains.jet.lang.resolve.java.JvmAnalyzerFacade;
 import org.jetbrains.jet.lang.resolve.java.JvmClassName;
 import org.jetbrains.jet.lang.resolve.name.FqName;
+import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.resolve.scopes.JetScope;
 import org.jetbrains.jet.lang.resolve.scopes.WritableScope;
 import org.jetbrains.jet.lang.resolve.scopes.WritableScopeImpl;
@@ -70,12 +72,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static org.jetbrains.jet.codegen.AsmUtil.asmTypeByFqNameWithoutInnerClasses;
 import static org.jetbrains.jet.codegen.binding.CodegenBinding.registerClassNameForScript;
-import static org.jetbrains.jet.lang.descriptors.DependencyKind.*;
 
 public class ReplInterpreter {
 
@@ -95,13 +97,14 @@ public class ReplInterpreter {
     @NotNull
     private final BindingTraceContext trace;
     @NotNull
-    private final ModuleDescriptorImpl module;
+    private final ModuleDescriptorImplX module;
 
     public ReplInterpreter(@NotNull Disposable disposable, @NotNull CompilerConfiguration configuration) {
         jetCoreEnvironment = JetCoreEnvironment.createForProduction(disposable, configuration);
         Project project = jetCoreEnvironment.getProject();
         trace = new BindingTraceContext();
-        module = AnalyzerFacadeForJVM.createJavaModule("<repl>");
+        //KT-5520
+        module = JvmAnalyzerFacade.instance$.createModule(Name.special("<repl>"));
         TopDownAnalysisParameters topDownAnalysisParameters = TopDownAnalysisParameters.createForLocalDeclarations(
                 new LockBasedStorageManager(),
                 new ExceptionTracker(), // dummy
@@ -109,9 +112,13 @@ public class ReplInterpreter {
         );
         injector = new InjectorForTopDownAnalyzerForJvm(project, topDownAnalysisParameters, trace, module);
         topDownAnalysisContext = new TopDownAnalysisContext(topDownAnalysisParameters);
-        module.addFragmentProvider(SOURCES, injector.getTopDownAnalyzer().getPackageFragmentProvider());
-        module.addFragmentProvider(BUILT_INS, KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider());
-        module.addFragmentProvider(BINARIES, injector.getJavaDescriptorResolver().getPackageFragmentProvider());
+        module.setPackageFragmentProviderForSources(new CompositePackageFragmentProvider(
+                Arrays.asList(injector.getTopDownAnalyzer().getPackageFragmentProvider(),
+                              injector.getJavaDescriptorResolver().getPackageFragmentProvider()
+                )
+        ));
+        module.addDependencyOnModule((ModuleDescriptorImplX) KotlinBuiltIns.getInstance().getBuiltInsModule());
+        module.addDependencyOnModule(module);
 
         List<URL> classpath = Lists.newArrayList();
 

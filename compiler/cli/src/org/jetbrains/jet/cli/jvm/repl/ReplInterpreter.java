@@ -50,6 +50,7 @@ import org.jetbrains.jet.lang.parsing.JetParserDefinition;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.psi.JetScript;
 import org.jetbrains.jet.lang.resolve.*;
+import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM;
 import org.jetbrains.jet.lang.resolve.java.JvmAnalyzerFacade;
 import org.jetbrains.jet.lang.resolve.java.JvmClassName;
 import org.jetbrains.jet.lang.resolve.name.FqName;
@@ -104,7 +105,7 @@ public class ReplInterpreter {
         Project project = jetCoreEnvironment.getProject();
         trace = new BindingTraceContext();
         //KT-5520
-        module = JvmAnalyzerFacade.instance$.createModule(Name.special("<repl>"));
+        module = AnalyzerFacadeForJVM.createModule("<repl>");
         TopDownAnalysisParameters topDownAnalysisParameters = TopDownAnalysisParameters.createForLocalDeclarations(
                 new LockBasedStorageManager(),
                 new ExceptionTracker(), // dummy

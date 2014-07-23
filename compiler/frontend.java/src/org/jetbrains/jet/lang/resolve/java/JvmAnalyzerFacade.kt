@@ -48,7 +48,7 @@ public class JvmPlatformParameters<M>(
         public val moduleByJavaClass: (JavaClass) -> M
 ) : PlatformModuleParameters(syntheticFiles, moduleScope)
 
-public class JvmAnalyzerFacade() : AnalyzerFacade<JvmResolverForModule, JvmPlatformParameters<*>> {
+public object JvmAnalyzerFacade : AnalyzerFacade<JvmResolverForModule, JvmPlatformParameters<*>> {
     override fun <M> createResolverForModule(
             project: Project, globalContext: GlobalContext, moduleDescriptor: ModuleDescriptorBase,
             platformParameters: JvmPlatformParameters<*>, setup: ResolverForProject<M, JvmResolverForModule>

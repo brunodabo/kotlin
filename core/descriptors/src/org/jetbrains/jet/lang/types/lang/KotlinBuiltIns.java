@@ -92,7 +92,7 @@ public class KotlinBuiltIns {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private final ModuleDescriptorImplX builtInsModule;
+    private final ModuleDescriptorImpl builtInsModule;
     private final BuiltinsPackageFragment builtinsPackageFragment;
 
     private volatile ImmutableSet<ClassDescriptor> nonPhysicalClasses;
@@ -105,7 +105,7 @@ public class KotlinBuiltIns {
     private final FqNames fqNames = new FqNames();
 
     private KotlinBuiltIns() {
-        builtInsModule = new ModuleDescriptorImplX(Name.special("<built-ins lazy module>"),
+        builtInsModule = new ModuleDescriptorImpl(Name.special("<built-ins lazy module>"),
                                                   Collections.<ImportPath>emptyList(),
                                                   PlatformToKotlinClassMap.EMPTY);
         builtinsPackageFragment = new BuiltinsPackageFragment(new LockBasedStorageManager(), builtInsModule);

@@ -42,19 +42,17 @@ import org.jetbrains.jet.codegen.KotlinCodegenFacade;
 import org.jetbrains.jet.codegen.state.GenerationState;
 import org.jetbrains.jet.config.CompilerConfiguration;
 import org.jetbrains.jet.di.InjectorForTopDownAnalyzerForJvm;
-import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX;
 import org.jetbrains.jet.lang.descriptors.ScriptDescriptor;
 import org.jetbrains.jet.lang.descriptors.impl.CompositePackageFragmentProvider;
+import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.descriptors.impl.PackageLikeBuilderDummy;
 import org.jetbrains.jet.lang.parsing.JetParserDefinition;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.psi.JetScript;
 import org.jetbrains.jet.lang.resolve.*;
 import org.jetbrains.jet.lang.resolve.java.AnalyzerFacadeForJVM;
-import org.jetbrains.jet.lang.resolve.java.JvmAnalyzerFacade;
 import org.jetbrains.jet.lang.resolve.java.JvmClassName;
 import org.jetbrains.jet.lang.resolve.name.FqName;
-import org.jetbrains.jet.lang.resolve.name.Name;
 import org.jetbrains.jet.lang.resolve.scopes.JetScope;
 import org.jetbrains.jet.lang.resolve.scopes.WritableScope;
 import org.jetbrains.jet.lang.resolve.scopes.WritableScopeImpl;
@@ -98,7 +96,7 @@ public class ReplInterpreter {
     @NotNull
     private final BindingTraceContext trace;
     @NotNull
-    private final ModuleDescriptorImplX module;
+    private final ModuleDescriptorImpl module;
 
     public ReplInterpreter(@NotNull Disposable disposable, @NotNull CompilerConfiguration configuration) {
         jetCoreEnvironment = JetCoreEnvironment.createForProduction(disposable, configuration);
@@ -118,7 +116,7 @@ public class ReplInterpreter {
                               injector.getJavaDescriptorResolver().getPackageFragmentProvider()
                 )
         ));
-        module.addDependencyOnModule((ModuleDescriptorImplX) KotlinBuiltIns.getInstance().getBuiltInsModule());
+        module.addDependencyOnModule((ModuleDescriptorImpl) KotlinBuiltIns.getInstance().getBuiltInsModule());
         module.addDependencyOnModule(module);
 
         List<URL> classpath = Lists.newArrayList();

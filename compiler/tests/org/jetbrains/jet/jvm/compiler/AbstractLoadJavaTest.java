@@ -36,7 +36,6 @@ import org.jetbrains.jet.descriptors.serialization.descriptors.DeserializedClass
 import org.jetbrains.jet.di.InjectorForTopDownAnalyzerForJvm;
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
 import org.jetbrains.jet.lang.descriptors.DeclarationDescriptor;
-import org.jetbrains.jet.lang.descriptors.DependencyKind;
 import org.jetbrains.jet.lang.descriptors.PackageViewDescriptor;
 import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.psi.JetFile;
@@ -173,9 +172,10 @@ public abstract class AbstractLoadJavaTest extends TestCaseWithTmpdir {
                 trace,
                 module);
 
-        module.addFragmentProvider(DependencyKind.BINARIES, injectorForAnalyzer.getJavaDescriptorResolver().getPackageFragmentProvider());
-
-        injectorForAnalyzer.getTopDownAnalyzer().analyzeFiles(parameters, environment.getSourceFiles());
+        injectorForAnalyzer.getTopDownAnalyzer().analyzeFiles(
+                parameters, environment.getSourceFiles(),
+                injectorForAnalyzer.getJavaDescriptorResolver().getPackageFragmentProvider()
+        );
 
         PackageViewDescriptor packageView = module.getPackage(TEST_PACKAGE_FQNAME);
         assert packageView != null : "Test package not found";

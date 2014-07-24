@@ -42,10 +42,7 @@ import org.jetbrains.jet.lang.types.lang.KotlinBuiltIns;
 import org.jetbrains.jet.storage.LockBasedStorageManager;
 
 import javax.inject.Inject;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 public class TopDownAnalyzer {
 
@@ -254,19 +251,37 @@ public class TopDownAnalyzer {
     @NotNull
     public TopDownAnalysisContext analyzeFiles(
             @NotNull TopDownAnalysisParameters topDownAnalysisParameters,
-            @NotNull Collection<JetFile> files
+            @NotNull Collection<JetFile> files,
+            @NotNull PackageFragmentProvider... additionalProviders
     ) {
-        ((ModuleDescriptorImpl) moduleDescriptor).addFragmentProvider(DependencyKind.SOURCES, packageFragmentProvider);
+        return analyzeFiles(topDownAnalysisParameters, files, Arrays.asList(additionalProviders));
+    }
 
-        // "depend on" builtins module
-        ((ModuleDescriptorImpl) moduleDescriptor).addFragmentProvider(DependencyKind.BUILT_INS, KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider());
+    @NotNull
+    public TopDownAnalysisContext analyzeFiles(
+            @NotNull TopDownAnalysisParameters topDownAnalysisParameters,
+            @NotNull Collection<JetFile> files,
+            @NotNull List<PackageFragmentProvider> additionalProviders
+    ) {
+        setupModule(additionalProviders);
 
         // dummy builder is used because "root" is module descriptor,
         // packages added to module explicitly in
-
         TopDownAnalysisContext c = new TopDownAnalysisContext(topDownAnalysisParameters);
         doProcess(c, JetModuleUtil.getSubpackagesOfRootScope(moduleDescriptor), new PackageLikeBuilderDummy(), files);
         return c;
+    }
+
+    private void setupModule(@NotNull List<PackageFragmentProvider> additionalProviders) {
+        CompositePackageFragmentProvider provider =
+                new CompositePackageFragmentProvider(KotlinPackage.plus(Arrays.asList(packageFragmentProvider), additionalProviders));
+        ModuleDescriptorImpl mutableModule = (ModuleDescriptorImpl) moduleDescriptor;
+        mutableModule.setPackageFragmentProviderForSources(provider);
+        mutableModule.addDependencyOnModule(mutableModule);
+
+        mutableModule.addDependencyOnModule(
+                (ModuleDescriptorImpl) KotlinBuiltIns.getInstance().getBuiltInsModule()
+        );
     }
 
 

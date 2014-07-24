@@ -26,7 +26,6 @@ import kotlin.KotlinPackage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jet.JetTestUtils;
 import org.jetbrains.jet.cli.jvm.compiler.CliLightClassGenerationSupport;
-import org.jetbrains.jet.lang.descriptors.DependencyKind;
 import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.diagnostics.*;
 import org.jetbrains.jet.lang.psi.Call;
@@ -119,9 +118,9 @@ public abstract class AbstractJetDiagnosticsTest extends BaseDiagnosticsTest {
             if (testModule == null) continue;
 
             ModuleDescriptorImpl module = modules.get(testModule);
+            module.addDependencyOnModule(module);
             for (TestModule dependency : testModule.getDependencies()) {
-                // Adding other modules as BINARIES here, because in teh reduced dependency ordering model they are equal to binaries
-                module.addFragmentProvider(DependencyKind.BINARIES, modules.get(dependency).getPackageFragmentProvider());
+                module.addDependencyOnModule(modules.get(dependency));
             }
         }
         return modules;

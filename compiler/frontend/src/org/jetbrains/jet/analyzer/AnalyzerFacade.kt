@@ -21,7 +21,7 @@ import org.jetbrains.jet.lang.resolve.name.Name
 import org.jetbrains.jet.lang.descriptors.ModuleDescriptor
 import java.util.HashMap
 import org.jetbrains.jet.lang.descriptors.ModuleDescriptorBase
-import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX
+import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.jet.lang.resolve.ImportPath
 import org.jetbrains.jet.lang.PlatformToKotlinClassMap
 import com.intellij.openapi.project.Project
@@ -44,7 +44,7 @@ public trait ResolverForProject<M, A : ResolverForModule> {
 }
 
 public class ResolverForProjectImpl<M, A : ResolverForModule>(
-        public override val descriptorByModule: Map<M, ModuleDescriptorImplX>,
+        public override val descriptorByModule: Map<M, ModuleDescriptorImpl>,
         public override val moduleByDescriptor: Map<ModuleDescriptor, M>
 ) : ResolverForProject<M, A> {
     override val analyzerByModuleDescriptor: MutableMap<ModuleDescriptor, A> = HashMap()
@@ -62,22 +62,22 @@ public trait ModuleInfo<T : ModuleInfo<T>> {
 
     //TODO: modifyDependencies(OrderedMap [ModuleInfo -> ModuleDescriptor])
     public trait DependencyOnBuiltins {
-        fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>)
+        fun adjustDependencies(builtinsModule: ModuleDescriptorImpl, dependencies: MutableList<ModuleDescriptorImpl>)
     }
 
     public enum class DependenciesOnBuiltins: DependencyOnBuiltins {
 
-        override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
+        override fun adjustDependencies(builtinsModule: ModuleDescriptorImpl, dependencies: MutableList<ModuleDescriptorImpl>) {
             //TODO: KT-5457
         }
 
         NONE {
-            override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
+            override fun adjustDependencies(builtinsModule: ModuleDescriptorImpl, dependencies: MutableList<ModuleDescriptorImpl>) {
                 //do nothing
             }
         }
         LAST {
-            override fun adjustDependencies(builtinsModule: ModuleDescriptorImplX, dependencies: MutableList<ModuleDescriptorImplX>) {
+            override fun adjustDependencies(builtinsModule: ModuleDescriptorImpl, dependencies: MutableList<ModuleDescriptorImpl>) {
                 dependencies.add(builtinsModule)
             }
         }
@@ -93,7 +93,7 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
     ): ResolverForProject<M, A> {
 
         fun createResolverForProject(): ResolverForProjectImpl<M, A> {
-            val descriptorByModule = HashMap<M, ModuleDescriptorImplX>()
+            val descriptorByModule = HashMap<M, ModuleDescriptorImpl>()
             val moduleByDescriptor = HashMap<ModuleDescriptor, M>()
             modules.forEach {
                 module ->
@@ -110,12 +110,12 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
             modules.forEach {
                 module ->
                 val currentModule = resolverForProject.descriptorByModule[module]!!
-                val dependenciesDescriptors = module.dependencies().mapTo(ArrayList<ModuleDescriptorImplX>()) {
+                val dependenciesDescriptors = module.dependencies().mapTo(ArrayList<ModuleDescriptorImpl>()) {
                     dependencyInfo ->
                     resolverForProject.descriptorByModule[dependencyInfo]!!
                 }
 
-                val builtinsModule = KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX
+                val builtinsModule = KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImpl
                 module.dependencyOnBuiltins().adjustDependencies(builtinsModule, dependenciesDescriptors)
                 dependenciesDescriptors.forEach { currentModule.addDependencyOnModule(it) }
             }
@@ -137,8 +137,8 @@ public trait AnalyzerFacade<A : ResolverForModule, P : PlatformModuleParameters>
         return resolverForProject
     }
 
-    public fun createModule(name: Name): ModuleDescriptorImplX {
-        return ModuleDescriptorImplX(name, defaultImports, platformToKotlinClassMap)
+    public fun createModule(name: Name): ModuleDescriptorImpl {
+        return ModuleDescriptorImpl(name, defaultImports, platformToKotlinClassMap)
     }
 
     protected fun <M> createResolverForModule(project: Project, globalContext: GlobalContext, moduleDescriptor: ModuleDescriptorBase,

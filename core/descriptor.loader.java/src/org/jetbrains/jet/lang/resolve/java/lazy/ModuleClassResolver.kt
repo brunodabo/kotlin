@@ -16,11 +16,9 @@
 
 package org.jetbrains.jet.lang.resolve.java.lazy
 
-import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX
 import org.jetbrains.jet.lang.resolve.java.structure.JavaClass
 import org.jetbrains.jet.lang.resolve.java.JavaDescriptorResolver
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor
-import kotlin.properties.Delegates
 import javax.inject.Inject
 
 trait ModuleClassResolver {

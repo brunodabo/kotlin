@@ -44,7 +44,6 @@ import org.jetbrains.jet.di.InjectorForLazyResolve;
 import org.jetbrains.jet.lang.PlatformToKotlinClassMap;
 import org.jetbrains.jet.lang.descriptors.CallableDescriptor;
 import org.jetbrains.jet.lang.descriptors.ClassDescriptor;
-import org.jetbrains.jet.lang.descriptors.DependencyKind;
 import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.psi.*;
 import org.jetbrains.jet.lang.resolve.BindingTraceContext;
@@ -246,8 +245,7 @@ public class JetSourceNavigationHelper {
                                                                          AnalyzerFacadeForJVM.DEFAULT_IMPORTS,
                                                                          PlatformToKotlinClassMap.EMPTY);
 
-        moduleDescriptor.addFragmentProvider(
-                DependencyKind.BUILT_INS, KotlinBuiltIns.getInstance().getBuiltInsModule().getPackageFragmentProvider());
+        moduleDescriptor.addDependencyOnModule((ModuleDescriptorImpl) KotlinBuiltIns.getInstance().getBuiltInsModule());
 
         ResolveSession resolveSession = new InjectorForLazyResolve(
                 project,

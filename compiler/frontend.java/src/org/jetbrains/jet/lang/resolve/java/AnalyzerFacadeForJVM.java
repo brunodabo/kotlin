@@ -25,8 +25,7 @@ import org.jetbrains.jet.analyzer.AnalyzeExhaust;
 import org.jetbrains.jet.context.ContextPackage;
 import org.jetbrains.jet.context.GlobalContext;
 import org.jetbrains.jet.di.InjectorForTopDownAnalyzerForJvm;
-import org.jetbrains.jet.lang.descriptors.DependencyKind;
-import org.jetbrains.jet.lang.descriptors.ModuleDescriptorImplX;
+import org.jetbrains.jet.lang.descriptors.PackageFragmentProvider;
 import org.jetbrains.jet.lang.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.lang.resolve.BindingTrace;
@@ -34,11 +33,10 @@ import org.jetbrains.jet.lang.resolve.ImportPath;
 import org.jetbrains.jet.lang.resolve.TopDownAnalysisParameters;
 import org.jetbrains.jet.lang.resolve.java.mapping.JavaToKotlinClassMap;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCache;
-import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalCacheProvider;
 import org.jetbrains.jet.lang.resolve.kotlin.incremental.IncrementalPackageFragmentProvider;
 import org.jetbrains.jet.lang.resolve.name.Name;
 
-import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -78,12 +76,11 @@ public enum AnalyzerFacadeForJVM  {
 
         InjectorForTopDownAnalyzerForJvm injector = new InjectorForTopDownAnalyzerForJvm(project, topDownAnalysisParameters, trace, module);
         try {
-            module.addFragmentProvider(DependencyKind.BINARIES, injector.getJavaDescriptorResolver().getPackageFragmentProvider());
+            List<PackageFragmentProvider> additionalProviders = new ArrayList<PackageFragmentProvider>();
 
             if (incrementalCache != null && moduleIds != null) {
                 for (String moduleId : moduleIds) {
-                    module.addFragmentProvider(
-                            DependencyKind.SOURCES,
+                    additionalProviders.add(
                             new IncrementalPackageFragmentProvider(
                                     files, module, globalContext.getStorageManager(), injector.getDeserializationGlobalContextForJava(),
                                     incrementalCache, moduleId, injector.getJavaDescriptorResolver()
@@ -91,8 +88,9 @@ public enum AnalyzerFacadeForJVM  {
                     );
                 }
             }
+            additionalProviders.add(injector.getJavaDescriptorResolver().getPackageFragmentProvider());
 
-            injector.getTopDownAnalyzer().analyzeFiles(topDownAnalysisParameters, files);
+            injector.getTopDownAnalyzer().analyzeFiles(topDownAnalysisParameters, files, additionalProviders);
             return AnalyzeExhaust.success(trace.getBindingContext(), module);
         }
         finally {
@@ -106,7 +104,7 @@ public enum AnalyzerFacadeForJVM  {
     }
 
     @NotNull
-    public static ModuleDescriptorImplX createModule(@NotNull String name) {
-        return new ModuleDescriptorImplX(Name.special(name), DEFAULT_IMPORTS, JavaToKotlinClassMap.getInstance());
+    public static ModuleDescriptorImpl createModule(@NotNull String name) {
+        return new ModuleDescriptorImpl(Name.special(name), DEFAULT_IMPORTS, JavaToKotlinClassMap.getInstance());
     }
 }

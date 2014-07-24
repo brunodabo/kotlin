@@ -57,7 +57,7 @@ public class DeserializerForDecompiler(val packageDirectory: VirtualFile, val di
 
     private val moduleDescriptor = createDummyModule("module for building decompiled sources")
 
-    private fun createDummyModule(name: String) = ModuleDescriptorImplX(Name.special("<$name>"), listOf(), PlatformToKotlinClassMap.EMPTY)
+    private fun createDummyModule(name: String) = ModuleDescriptorImpl(Name.special("<$name>"), listOf(), PlatformToKotlinClassMap.EMPTY)
 
     override fun resolveTopLevelClass(classFqName: FqName) = deserializationContext.classDeserializer.deserializeClass(classFqName.toClassId())
 
@@ -142,7 +142,7 @@ public class DeserializerForDecompiler(val packageDirectory: VirtualFile, val di
 
     {
         moduleDescriptor.setPackageFragmentProviderForSources(packageFragmentProvider)
-        moduleDescriptor.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImplX)
+        moduleDescriptor.addDependencyOnModule(KotlinBuiltIns.getInstance().getBuiltInsModule() as ModuleDescriptorImpl)
         moduleDescriptor.addDependencyOnModule(moduleDescriptor)
         val moduleWithMissingDependencies = createDummyModule("module with missing dependencies for decompiled sources")
         moduleWithMissingDependencies.setPackageFragmentProviderForSources(

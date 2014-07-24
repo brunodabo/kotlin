@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-package org.jetbrains.jet.lang.descriptors
+package org.jetbrains.jet.lang.descriptors.impl
 
-import org.jetbrains.jet.lang.PlatformToKotlinClassMap
-import org.jetbrains.jet.lang.descriptors.impl.CompositePackageFragmentProvider
-import org.jetbrains.jet.lang.resolve.ImportPath
 import org.jetbrains.jet.lang.resolve.name.Name
+import org.jetbrains.jet.lang.PlatformToKotlinClassMap
+import org.jetbrains.jet.lang.descriptors.ModuleDescriptorBase
+import org.jetbrains.jet.lang.descriptors.PackageFragmentProvider
+import org.jetbrains.jet.lang.descriptors.ModuleFactory
 import java.util.ArrayList
+import org.jetbrains.jet.lang.resolve.ImportPath
 import kotlin.properties.Delegates
 
-public class ModuleDescriptorImplX(name: Name, defaultImports: List<ImportPath>, platformToKotlinClassMap: PlatformToKotlinClassMap) :
+public class ModuleDescriptorImpl(name: Name, defaultImports: List<ImportPath>, platformToKotlinClassMap: PlatformToKotlinClassMap) :
         ModuleDescriptorBase(name, defaultImports, platformToKotlinClassMap) {
     {
         if (!name.isSpecial()) {
@@ -31,10 +33,10 @@ public class ModuleDescriptorImplX(name: Name, defaultImports: List<ImportPath>,
         }
     }
 
-    private val dependencies: MutableList<ModuleDescriptorImplX> = ArrayList()
+    private val dependencies: MutableList<ModuleDescriptorImpl> = ArrayList()
 
     public var ownPackageFragmentProvider: PackageFragmentProvider by Delegates.notNull()
-    public fun addDependencyOnModule(dependency: ModuleDescriptorImplX) {
+    public fun addDependencyOnModule(dependency: ModuleDescriptorImpl) {
         dependencies.add(dependency)
     }
 
@@ -48,9 +50,9 @@ public class ModuleDescriptorImplX(name: Name, defaultImports: List<ImportPath>,
     }
 
     class object {
-        public object FACTORY : ModuleFactory<ModuleDescriptorImplX> {
+        public object FACTORY : ModuleFactory<ModuleDescriptorImpl> {
             override fun createModule(name: Name, defaultImports: List<ImportPath>, classMap: PlatformToKotlinClassMap)
-                    = ModuleDescriptorImplX(name, defaultImports, classMap)
+                    = ModuleDescriptorImpl(name, defaultImports, classMap)
         }
     }
 }

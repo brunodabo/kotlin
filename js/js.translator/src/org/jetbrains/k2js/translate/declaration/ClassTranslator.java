@@ -241,7 +241,7 @@ public final class ClassTranslator extends AbstractTranslator {
         for (JetParameter parameter : getPrimaryConstructorParameters(classDeclaration)) {
             PropertyDescriptor descriptor = getPropertyDescriptorForConstructorParameter(bindingContext(), parameter);
             if (descriptor != null) {
-                PropertyTranslator.translateAccessors(descriptor, result, classDeclarationContext);
+                PropertyTranslator.OBJECT$.translateAccessors(descriptor, result, classDeclarationContext);
             }
         }
     }

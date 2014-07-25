@@ -245,6 +245,7 @@ public class JetSourceNavigationHelper {
                                                                          AnalyzerFacadeForJVM.DEFAULT_IMPORTS,
                                                                          PlatformToKotlinClassMap.EMPTY);
 
+        moduleDescriptor.addDependencyOnModule(moduleDescriptor);
         moduleDescriptor.addDependencyOnModule((ModuleDescriptorImpl) KotlinBuiltIns.getInstance().getBuiltInsModule());
 
         ResolveSession resolveSession = new InjectorForLazyResolve(

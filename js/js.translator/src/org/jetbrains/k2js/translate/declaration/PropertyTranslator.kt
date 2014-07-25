@@ -23,9 +23,11 @@ import org.jetbrains.jet.lang.psi.JetProperty
 import org.jetbrains.jet.lang.psi.JetPropertyAccessor
 import org.jetbrains.jet.lang.resolve.BindingContext
 import org.jetbrains.k2js.translate.callTranslator.CallTranslator
+import org.jetbrains.k2js.translate.context.Namer
 import org.jetbrains.k2js.translate.context.TranslationContext
 import org.jetbrains.k2js.translate.general.AbstractTranslator
 import org.jetbrains.k2js.translate.general.Translation
+import org.jetbrains.k2js.translate.utils.JsAstUtils
 import org.jetbrains.k2js.translate.utils.JsDescriptorUtils
 import org.jetbrains.k2js.translate.utils.TranslationUtils
 
@@ -36,7 +38,7 @@ import org.jetbrains.k2js.translate.utils.TranslationUtils.*
  * Translates single property /w accessors.
  */
 
-public class PropertyTranslator private(private val descriptor: PropertyDescriptor, private val declaration: JetProperty?, context: TranslationContext) : AbstractTranslator(context) {
+public class PropertyTranslator private(private val descriptor: PropertyDescriptor, private val declaration: JetProperty?, private val delegateName: String?, context: TranslationContext) : AbstractTranslator(context) {
 
     class object {
 
@@ -46,7 +48,12 @@ public class PropertyTranslator private(private val descriptor: PropertyDescript
 
         public fun translateAccessors(descriptor: PropertyDescriptor, declaration: JetProperty?, result: MutableList<JsPropertyInitializer>, context: TranslationContext) {
             if (!JsDescriptorUtils.isSimpleFinalProperty(descriptor))
-                PropertyTranslator(descriptor, declaration, context).translate(result)
+                PropertyTranslator(descriptor, declaration, null, context).translate(result)
+        }
+
+        public fun translateAccessorsForDelegate(descriptor: PropertyDescriptor, delegateName: String?, result: MutableList<JsPropertyInitializer>, context: TranslationContext) {
+            if (!JsDescriptorUtils.isSimpleFinalProperty(descriptor))
+                PropertyTranslator(descriptor, null, delegateName, context).translate(result)
         }
     }
 
@@ -87,12 +94,29 @@ public class PropertyTranslator private(private val descriptor: PropertyDescript
 
     private fun generateDefaultGetterFunction(getterDescriptor: PropertyGetterDescriptor): JsFunction {
         var value: JsExpression
-        val delegatedCall = bindingContext().get(BindingContext.DELEGATED_PROPERTY_RESOLVED_CALL, getterDescriptor)
-        value = if (delegatedCall != null)
-            CallTranslator.translate(context(), delegatedCall, getDelegateNameRef(propertyName))
-        else
-            backingFieldReference(context(), this.descriptor)
-        return simpleReturnFunction(context().getScopeForDescriptor(getterDescriptor.getContainingDeclaration()), value)
+        if (delegateName != null) {
+            val delegateRefName = context().getScopeForDescriptor(getterDescriptor).declareName(delegateName)
+            val delegateRef = JsNameRef(delegateRefName, JsLiteral.THIS)
+            value = JsNameRef(propertyName, delegateRef)
+            if (JsDescriptorUtils.isExtension(descriptor)) {
+                val getterName = context().getNameForDescriptor(getterDescriptor)
+                val receiver = Namer.getReceiverParameterName()
+                value = JsInvocation(JsNameRef(getterName, delegateRef), JsNameRef(receiver))
+            }
+        }
+        else {
+            val delegatedCall = bindingContext().get(BindingContext.DELEGATED_PROPERTY_RESOLVED_CALL, getterDescriptor)
+            value = if (delegatedCall != null)
+                CallTranslator.translate(context(), delegatedCall, getDelegateNameRef(propertyName))
+            else
+                backingFieldReference(context(), this.descriptor)
+        }
+        val jsFunction = simpleReturnFunction(context().getScopeForDescriptor(getterDescriptor.getContainingDeclaration()), value)
+        if (delegateName != null && JsDescriptorUtils.isExtension(descriptor)) {
+            val receiverName = jsFunction.getScope().declareName(Namer.getReceiverParameterName())
+            jsFunction.getParameters().add(JsParameter(receiverName))
+        }
+        return jsFunction
     }
 
     private fun generateDefaultSetter(): JsPropertyInitializer {
@@ -109,14 +133,32 @@ public class PropertyTranslator private(private val descriptor: PropertyDescript
         val defaultParameterRef = defaultParameter.getName().makeRef()
 
         val setExpression: JsExpression
-        jsFunction.getParameters().add(defaultParameter)
-        val contextWithAliased = context().innerContextWithAliased(valueParameterDescriptor, defaultParameterRef)
+        if (delegateName != null) {
+            val delegateRefName = context().getScopeForDescriptor(setterDescriptor).declareName(delegateName)
+            val delegateRef = JsNameRef(delegateRefName, JsLiteral.THIS)
+            if (JsDescriptorUtils.isExtension(descriptor)) {
+                val setterName = context().getNameForDescriptor(setterDescriptor)
+                val setterNameRef = JsNameRef(setterName, delegateRef)
+                val extensionFunctionReceiverName = jsFunction.getScope().declareName(Namer.getReceiverParameterName())
+                jsFunction.getParameters().add(JsParameter(extensionFunctionReceiverName))
+                setExpression = JsInvocation(setterNameRef, JsNameRef(extensionFunctionReceiverName), defaultParameterRef)
+            }
+            else {
+                val propertyNameRef = JsNameRef(propertyName, delegateRef)
+                setExpression = JsAstUtils.assignment(propertyNameRef, defaultParameterRef)
+            }
+            jsFunction.getParameters().add(defaultParameter)
+        }
+        else {
+            jsFunction.getParameters().add(defaultParameter)
+            val contextWithAliased = context().innerContextWithAliased(valueParameterDescriptor, defaultParameterRef)
 
-        val delegatedCall = bindingContext().get(BindingContext.DELEGATED_PROPERTY_RESOLVED_CALL, setterDescriptor)
-        setExpression = if (delegatedCall != null)
-            CallTranslator.translate(contextWithAliased, delegatedCall, getDelegateNameRef(propertyName))
-        else
-            assignmentToBackingField(contextWithAliased, descriptor, defaultParameterRef)
+            val delegatedCall = bindingContext().get(BindingContext.DELEGATED_PROPERTY_RESOLVED_CALL, setterDescriptor)
+            setExpression = if (delegatedCall != null)
+                CallTranslator.translate(contextWithAliased, delegatedCall, getDelegateNameRef(propertyName))
+            else
+                assignmentToBackingField(contextWithAliased, descriptor, defaultParameterRef)
+        }
         jsFunction.setBody(JsBlock(setExpression.makeStmt()))
         return jsFunction
     }

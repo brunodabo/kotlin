@@ -21,21 +21,22 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.NavigatablePsiElement;
+import com.intellij.openapi.util.Condition;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.rt.execution.junit.FileComparisonFailure;
 import com.intellij.testFramework.ExpectedHighlightingData;
-import junit.framework.AssertionFailedError;
+import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.jet.JetTestUtils;
-import org.jetbrains.jet.lang.psi.JetElement;
+import org.jetbrains.jet.lang.psi.JetFile;
 import org.jetbrains.jet.plugin.JetLightCodeInsightFixtureTestCase;
 import org.jetbrains.jet.plugin.PluginTestCaseBase;
 import org.jetbrains.jet.plugin.highlighter.JetLineMarkerProvider;
 import org.jetbrains.jet.plugin.libraries.NavigateToLibrarySourceTest;
 import org.jetbrains.jet.testing.HighlightTestDataUtil;
+import org.junit.Assert;
 
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -129,7 +130,6 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
 
             try {
                 data.checkLineMarkers(markers, document.getText());
-                assertNavigationElements(markers);
             }
             catch (AssertionError error) {
                 try {
@@ -143,6 +143,8 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
                                                     failure.getFilePath());
                 }
             }
+
+            assertNavigationElements(markers);
         }
         catch (Exception exc) {
             throw new RuntimeException(exc);
@@ -150,28 +152,46 @@ public class OverrideImplementLineMarkerTest extends JetLightCodeInsightFixtureT
     }
 
     private void assertNavigationElements(List<LineMarkerInfo> markers) {
-        //String expectedNavigationData = getExpectedSuperDeclarationNavigationData();
-        //if (expectedNavigationData.isEmpty()) return;
-        //
-        //Collection<PsiElement> navigateElements = new ArrayList<PsiElement>();
-        //for (LineMarkerInfo marker : markers) {
-        //    PsiElement element = marker.getElement();
-        //    GutterIconNavigationHandler handler = marker.getNavigationHandler();
-        //
-        //    if (handler instanceof JetLineMarkerProvider.KotlinSuperNavigationHandler) {
-        //        //noinspection unchecked
-        //        handler.navigate(null, element);
-        //        navigateElements.addAll(((JetLineMarkerProvider.KotlinSuperNavigationHandler) handler).getNavigationElements());
-        //    }
-        //}
-        //String actualNavigationData = NavigateToLibrarySourceTest.getActualAnnotatedLibraryCode(myFixture.getProject(), navigateElements);
-        //
-        //assertSameLines(expectedNavigationData, actualNavigationData);
-    }
+        List<String> navigationDataComments = JetTestUtils.getLastBlockCommentsInFile((JetFile) myFixture.getFile());
+        if (navigationDataComments.isEmpty()) return;
 
-    private String getExpectedSuperDeclarationNavigationData() {
-        Document document = myFixture.getDocument(myFixture.getFile());
-        assertNotNull(document);
-        return JetTestUtils.getLastCommentedLines(document);
+        for (String lineMarkerNavigationData : navigationDataComments) {
+            int firstLineEnd = lineMarkerNavigationData.indexOf("\n");
+            assertTrue("The first line in block comment must contain description of marker for navigation check", firstLineEnd != -1);
+
+            final String lineMarkerDescription = lineMarkerNavigationData.substring(0, firstLineEnd);
+            String expectedNavigationData = lineMarkerNavigationData.substring(firstLineEnd, lineMarkerNavigationData.length());
+
+            LineMarkerInfo navigateMarker = ContainerUtil.find(markers, new Condition<LineMarkerInfo>() {
+                @Override
+                public boolean value(LineMarkerInfo marker) {
+                    String tooltip = marker.getLineMarkerTooltip();
+                    return tooltip != null && tooltip.startsWith(lineMarkerDescription);
+                }
+            });
+
+            assertNotNull(
+                    String.format("Can't find marker for navigation check with description \"%s\"", lineMarkerDescription),
+                    navigateMarker);
+
+            Collection<PsiElement> navigateElements = new ArrayList<PsiElement>();
+
+            GutterIconNavigationHandler handler = navigateMarker.getNavigationHandler();
+            if (handler instanceof JetLineMarkerProvider.KotlinSuperNavigationHandler) {
+                PsiElement element = navigateMarker.getElement();
+
+                //noinspection unchecked
+                handler.navigate(null, element);
+                navigateElements.addAll(((JetLineMarkerProvider.KotlinSuperNavigationHandler) handler).getNavigationElements());
+
+                String actualNavigationData =
+                        NavigateToLibrarySourceTest.getActualAnnotatedLibraryCode(myFixture.getProject(), navigateElements);
+
+                assertSameLines(expectedNavigationData, actualNavigationData);
+            }
+            else {
+                Assert.fail("Only JetLineMarkerProvider.KotlinSuperNavigationHandler are supported in navigate check");
+            }
+        }
     }
 }

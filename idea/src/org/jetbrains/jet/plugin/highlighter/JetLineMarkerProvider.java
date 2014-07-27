@@ -509,7 +509,7 @@ public class JetLineMarkerProvider implements LineMarkerProvider {
             List<NavigatablePsiElement> superDeclarations = Lists.newArrayList();
             for (CallableMemberDescriptor overriddenMember : overriddenMembers) {
                 Collection<PsiElement> declarations =
-                        DescriptorToDeclarationUtil.instance$.resolveToPsiElements(element.getProject(), overriddenMember);
+                        DescriptorToDeclarationUtil.INSTANCE$.resolveToPsiElements(element.getProject(), overriddenMember);
                 for (PsiElement declaration : declarations) {
                     if (declaration instanceof NavigatablePsiElement) {
                         superDeclarations.add((NavigatablePsiElement) declaration);

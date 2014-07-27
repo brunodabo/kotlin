@@ -142,7 +142,7 @@ public class JetRefactoringUtil {
                     @Override
                     public Pair<PsiElement, CallableDescriptor> fun(CallableDescriptor descriptor) {
                         return new Pair<PsiElement, CallableDescriptor>(
-                                DescriptorToDeclarationUtil.instance$.getDeclaration(project, descriptor),
+                                DescriptorToDeclarationUtil.INSTANCE$.getDeclaration(project, descriptor),
                                 descriptor
                         );
                     }

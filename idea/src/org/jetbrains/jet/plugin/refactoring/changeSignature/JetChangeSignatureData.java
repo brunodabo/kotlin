@@ -106,7 +106,7 @@ public final class JetChangeSignatureData implements JetMethodDescriptor {
 
     @NotNull
     private Collection<PsiElement> computeHierarchyFrom(@NotNull FunctionDescriptor baseDescriptor) {
-        PsiElement declaration = DescriptorToDeclarationUtil.instance$.getDeclaration(baseDeclaration.getProject(), baseDescriptor);
+        PsiElement declaration = DescriptorToDeclarationUtil.INSTANCE$.getDeclaration(baseDeclaration.getProject(), baseDescriptor);
         Set<PsiElement> result = Sets.newHashSet();
         result.add(declaration);
         if (!(declaration instanceof JetNamedFunction)) {

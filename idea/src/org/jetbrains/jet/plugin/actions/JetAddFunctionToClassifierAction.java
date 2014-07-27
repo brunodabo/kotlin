@@ -80,7 +80,7 @@ public class JetAddFunctionToClassifierAction implements QuestionAction {
 
         PsiDocumentManager.getInstance(project).commitAllDocuments();
 
-        final JetClass classifierDeclaration = (JetClass) DescriptorToDeclarationUtil.instance$.getDeclaration(project, typeDescriptor);
+        final JetClass classifierDeclaration = (JetClass) DescriptorToDeclarationUtil.INSTANCE$.getDeclaration(project, typeDescriptor);
         CommandProcessor.getInstance().executeCommand(project, new Runnable() {
             @Override
             public void run() {

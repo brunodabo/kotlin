@@ -371,6 +371,16 @@ public class PseudoValueTestGenerated extends AbstractPseudoValueTest {
                 doTest("compiler/testData/cfg/expressions/Assignments.kt");
             }
             
+            @TestMetadata("callableReferences.kt")
+            public void testCallableReferences() throws Exception {
+                doTest("compiler/testData/cfg/expressions/callableReferences.kt");
+            }
+            
+            @TestMetadata("casts.kt")
+            public void testCasts() throws Exception {
+                doTest("compiler/testData/cfg/expressions/casts.kt");
+            }
+            
             @TestMetadata("chainedQualifiedExpression.kt")
             public void testChainedQualifiedExpression() throws Exception {
                 doTest("compiler/testData/cfg/expressions/chainedQualifiedExpression.kt");
@@ -386,6 +396,11 @@ public class PseudoValueTestGenerated extends AbstractPseudoValueTest {
                 doTest("compiler/testData/cfg/expressions/incdec.kt");
             }
             
+            @TestMetadata("invalidVariableCall.kt")
+            public void testInvalidVariableCall() throws Exception {
+                doTest("compiler/testData/cfg/expressions/invalidVariableCall.kt");
+            }
+            
             @TestMetadata("LazyBooleans.kt")
             public void testLazyBooleans() throws Exception {
                 doTest("compiler/testData/cfg/expressions/LazyBooleans.kt");
@@ -394,6 +409,11 @@ public class PseudoValueTestGenerated extends AbstractPseudoValueTest {
             @TestMetadata("nothingExpr.kt")
             public void testNothingExpr() throws Exception {
                 doTest("compiler/testData/cfg/expressions/nothingExpr.kt");
+            }
+            
+            @TestMetadata("parenthesizedSelector.kt")
+            public void testParenthesizedSelector() throws Exception {
+                doTest("compiler/testData/cfg/expressions/parenthesizedSelector.kt");
             }
             
             @TestMetadata("propertySafeCall.kt")
@@ -424,6 +444,16 @@ public class PseudoValueTestGenerated extends AbstractPseudoValueTest {
             @TestMetadata("unresolvedProperty.kt")
             public void testUnresolvedProperty() throws Exception {
                 doTest("compiler/testData/cfg/expressions/unresolvedProperty.kt");
+            }
+            
+            @TestMetadata("unresolvedWriteLHS.kt")
+            public void testUnresolvedWriteLHS() throws Exception {
+                doTest("compiler/testData/cfg/expressions/unresolvedWriteLHS.kt");
+            }
+            
+            @TestMetadata("unsupportedReturns.kt")
+            public void testUnsupportedReturns() throws Exception {
+                doTest("compiler/testData/cfg/expressions/unsupportedReturns.kt");
             }
             
             @TestMetadata("unusedExpressionSimpleName.kt")

@@ -106,7 +106,7 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         private final PseudoValueFactory valueFactory = new PseudoValueFactoryImpl() {
             @NotNull
             @Override
-            public PseudoValue newValue(@Nullable JetElement element, @NotNull InstructionWithValue instruction) {
+            public PseudoValue newValue(@Nullable JetElement element, @Nullable InstructionWithValue instruction) {
                 PseudoValue value = super.newValue(element, instruction);
                 if (element != null) {
                     bindValue(value, element);
@@ -283,6 +283,12 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
             pseudocode.bindElementToValue(element, value);
         }
 
+        @NotNull
+        @Override
+        public PseudoValue newValue(@Nullable JetElement element) {
+            return valueFactory.newValue(element, null);
+        }
+
         @Override
         public void returnValue(@NotNull JetExpression returnExpression, @NotNull PseudoValue returnValue, @NotNull JetElement subroutine) {
             Label exitPoint = getExitPoint(subroutine);
@@ -384,11 +390,6 @@ public class JetControlFlowInstructionsGenerator extends JetControlFlowBuilderAd
         public void exitTryFinally() {
             BlockInfo pop = allBlocks.pop();
             assert pop instanceof TryFinallyBlockInfo;
-        }
-
-        @Override
-        public void unsupported(JetElement element) {
-            add(new UnsupportedElementInstruction(element, getCurrentScope()));
         }
 
         @Override
